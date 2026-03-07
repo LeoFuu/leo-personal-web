@@ -5,6 +5,9 @@ import { Github, Twitter, Linkedin, Heart, Plus, MessageSquare, ArrowRight, Veri
 import { HolographicAvatar } from '../ui/HolographicAvatar';
 import { projects, thoughts } from '../../config/site';
 
+// 💥 引入小黑精灵组件
+import { VoidSpirit } from '../features/VoidSpirit';
+
 interface ViewProps {
   onNavigate?: (id: string) => void;
   showSpiritHere: boolean;
@@ -27,7 +30,8 @@ const MetalClipBack = () => (
   />
 );
 
-const IDCard = ({ controls }: { controls: any }) => (
+// 💥 将灵感精灵的 Props 传给 IDCard
+const IDCard = ({ controls, showSpiritHere, isPreparing, jumpType, bumpCount }: any) => (
   <motion.div 
      className="absolute top-[-90px] left-[0px] z-40 bg-[#F8F9FA] rounded-[36px] w-[280px] h-[95px] flex items-center shadow-lg sm:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)] border border-white/50"
      style={{
@@ -38,7 +42,18 @@ const IDCard = ({ controls }: { controls: any }) => (
      initial={{ rotate: -6 }} 
      animate={controls}
   >
-     <div className="relative ml-[52px] shrink-0">
+     {/* 💥 精灵降落区：直接坐在名片内部！继承名片的所有摇晃效果！ */}
+     {showSpiritHere && (
+        <VoidSpirit 
+           // 每次 bumpCount 改变，就会原地触发一次 hop 跳跃
+           locationId={`home-card-${bumpCount}`} 
+           isPreparing={isPreparing} 
+           // 只有在准备切页时才用 soar/dive，平时颠簸强制用 hop
+           jumpType={isPreparing ? jumpType : 'hop'} 
+        />
+     )}
+
+     <div className="relative ml-[52px] shrink-0 z-10">
         <div 
           className="w-14 h-14 rounded-full overflow-hidden bg-black/5 border-[2px] border-white shadow-sm"
           style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)', isolation: 'isolate' }}
@@ -47,7 +62,7 @@ const IDCard = ({ controls }: { controls: any }) => (
         </div>
      </div>
      
-     <div className="ml-4 flex flex-col justify-center">
+     <div className="ml-4 flex flex-col justify-center z-10">
         <div className="flex items-center gap-1.5 mb-1">
           <h1 className="text-2xl font-black text-[#1A1A1A] tracking-tighter leading-none">付昱淋</h1>
           <Verified size={16} className="text-blue-500 fill-blue-50" />
@@ -70,10 +85,7 @@ const MetalClipFront = ({ controls }: { controls: any }) => (
        boxShadow: 'inset -1px -2px 4px rgba(0,0,0,0.2), 4px 8px 12px rgba(0,0,0,0.5)',
        rotate: -4,
      }}
-     style={{ 
-        WebkitBackfaceVisibility: 'hidden',
-        willChange: 'transform',
-     }}
+     style={{ WebkitBackfaceVisibility: 'hidden', willChange: 'transform' }}
      animate={controls}
   >
       <div className="absolute top-[15%] bottom-[15%] left-[50%] w-[2px] bg-black/10 shadow-[inset_1px_0_1px_rgba(255,255,255,0.4)] -translate-x-1/2 rounded-full" />
@@ -89,9 +101,7 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
            key={id}
            style={{ 
              WebkitBackfaceVisibility: 'hidden',
-             // 💥 加上 willChange 提示显卡提前分配加速通道
              willChange: 'transform, opacity, z-index',
-             // 💥 现在手机端已经去掉了模糊，这里就可以大胆重新加上强制 3D 加速！
              transform: 'translateZ(0)',
            }}
            animate={{
@@ -103,11 +113,8 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
              opacity: position === 2 ? 0.8 : 1
            }}
            transition={{ type: 'spring', stiffness: 500, damping: 25, mass: 0.8 }}
-           // 💥 极其关键的一步：从 className 中删除了 overflow-hidden！外层动画容器终于解开了束缚！
            className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-md sm:shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between border border-white/20`}
          >
-            {/* 💥 骨肉分离法：新建一个隐形的绝对定位内胆（absolute inset-0），专门用来放裁剪（overflow-hidden）和背景数字 */}
-            {/* 它自己不参与动画计算，所以绝对不会拖累 GPU！ */}
             <div className="absolute inset-0 overflow-hidden rounded-[48px] pointer-events-none">
                <div className="absolute -bottom-6 -right-6 text-[180px] text-black/5 font-black tracking-tighter select-none">
                  {id + 1}
@@ -139,10 +146,13 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
   </>
 );
 
-export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
+export const HomeView: React.FC<ViewProps> = ({ onNavigate, showSpiritHere, isPreparing, jumpType }) => {
   const [deck, setDeck] = useState([0, 1, 2]); 
   const [isAnimating, setIsAnimating] = useState(false);
   
+  // 💥 颠簸触发器计数
+  const [bumpCount, setBumpCount] = useState(0);
+
   const clipControls = useAnimationControls();
   const idCardControls = useAnimationControls(); 
 
@@ -156,6 +166,10 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
     await new Promise(r => setTimeout(r, 40));
     setDeck(prev => [prev[1], prev[2], prev[0]]);
     await new Promise(r => setTimeout(r, 60));
+
+    // 💥 灵魂联动：在名片狠狠回弹的这一瞬间，给计数器 +1
+    // 这会导致 VoidSpirit 的 locationId 改变，立刻触发一次原地的 Hop 动画！
+    setBumpCount(prev => prev + 1);
 
     clipControls.start({ rotate: -4, x: 0, y: 0, transition: { type: 'spring', stiffness: 600, damping: 20 } });
     idCardControls.start({ rotate: -6, y: 0, transition: { type: 'spring', stiffness: 600, damping: 15 } });
@@ -171,7 +185,16 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
     >
       <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
         <MetalClipBack />
-        <IDCard controls={idCardControls} />
+        
+        {/* 💥 把 Props 传给 IDCard */}
+        <IDCard 
+           controls={idCardControls} 
+           showSpiritHere={showSpiritHere} 
+           isPreparing={isPreparing} 
+           jumpType={jumpType} 
+           bumpCount={bumpCount} 
+        />
+        
         <MetalClipFront controls={clipControls} />
         <ProjectDeck deck={deck} />
       </div>
