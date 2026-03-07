@@ -23,6 +23,7 @@ const MetalClipBack = () => (
        background: 'linear-gradient(90deg, #374151 0%, #6B7280 40%, #1F2937 100%)', 
        boxShadow: 'inset -2px -2px 4px rgba(0,0,0,0.4), 0 5px 10px rgba(0,0,0,0.6)',
        transform: 'rotate(-4deg)',
+       // 💥 移除了会导致白块的 over-hints
      }} 
   />
 );
@@ -32,7 +33,8 @@ const IDCard = ({ controls }: { controls: any }) => (
      className="absolute top-[-90px] left-[0px] z-40 bg-[#F8F9FA] rounded-[36px] w-[280px] h-[95px] flex items-center shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)] border border-white/50"
      style={{
         transformOrigin: '20px 65px',
-        // 💥 移除了会导致白块的 will-change 和 backfaceVisibility
+        // 💥 精准技术修复：只保留 bare minimum hint，防止 flushing
+        willChange: 'transform', 
      }}
      initial={{ rotate: -6 }} 
      animate={controls}
@@ -66,6 +68,9 @@ const MetalClipFront = ({ controls }: { controls: any }) => (
        boxShadow: 'inset -1px -2px 4px rgba(0,0,0,0.2), 4px 8px 12px rgba(0,0,0,0.5)',
        rotate: -4,
      }}
+     style={{
+        willChange: 'transform', 
+     }}
      animate={controls}
   >
       <div className="absolute top-[15%] bottom-[15%] left-[50%] w-[2px] bg-black/10 shadow-[inset_1px_0_1px_rgba(255,255,255,0.4)] -translate-x-1/2 rounded-full" />
@@ -79,7 +84,9 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
        return (
          <motion.div 
            key={id}
-           // 💥 移除了强迫分离图层的 translateZ(0)，彻底消灭手机端白块现象！
+           style={{
+             willChange: 'transform', 
+           }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
@@ -92,7 +99,7 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
            className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between overflow-hidden border border-white/20`}
          >
             <div className="flex justify-between items-start pl-6 relative z-10">
-               <div className="bg-white/50 backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-inner">
+               <div className="bg-white/50 backdrop-blur-lg px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-inner">
                   Project {id + 1}
                </div>
                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-xl">
@@ -101,8 +108,10 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
             </div>
             
             <div className="mt-auto relative z-10">
-               {/* 💥 将内部极其沉重的 backdrop-blur-2xl 降级为 backdrop-blur-lg，肉眼看不出区别，但点击切换时的性能提升巨大 */}
-               <div className="bg-white/40 backdrop-blur-lg p-6 rounded-[32px] border border-white/50 shadow-sm">
+               {/* 💥 神奇的视觉欺骗：
+                  手机端：bg-white/70 + backdrop-blur-none (彻底关闭模糊计算，直接变成贴纸，可以被渲染"固定"住，彻底消灭切换掉帧！)
+                  电脑端 (sm 以上)：bg-white/40 + sm:backdrop-blur-lg (恢复顶级物理磨砂) */}
+               <div className="p-6 rounded-[32px] border border-white/50 shadow-sm relative overflow-hidden bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg">
                  <h2 className={`text-3xl font-black ${TEXT_COLORS[id]} leading-tight mb-2 tracking-tight`}>
                     {projects[id]?.title || "Upcoming Project"}
                  </h2>
@@ -139,6 +148,7 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
+    // 💥 移除了会导致耗费性能重绘的 boxShadow 动画，只保留 transform 动画
     clipControls.start({
         rotate: -25, 
         x: -5,
