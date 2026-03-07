@@ -2,32 +2,47 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Book, MessageSquare, Sparkles, ArrowDown } from 'lucide-react';
+import { Home, Book, MessageSquare, Sparkles, ArrowDown, User } from 'lucide-react';
 import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
 
 import { LiquidFilters } from '../components/ui/LiquidFilters';
 import { VoidSpirit } from '../components/features/VoidSpirit';
-import { HomeView } from '../components/views/HomeView';
+import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
 import { NeuralView } from '../components/views/NeuralView';
 
-const NotesView = (props: any) => <div className="text-slate-800 pt-12 p-4"><h2>Digital Garden</h2><p className="text-slate-500">功能开发中...</p></div>;
-const GuestbookView = (props: any) => <div className="text-slate-800 pt-12 p-4"><h2>Guestbook</h2><p className="text-slate-500">功能开发中...</p></div>;
+const NotesView = (props: any) => <div className="text-slate-800 pt-12 p-4"><h2>Digital Garden</h2><p className="text-slate-500 italic mt-4">“这里记录着我所有未成熟的思想火花...”</p></div>;
+const GuestbookView = (props: any) => <div className="text-slate-800 pt-12 p-4"><h2>Guestbook</h2><p className="text-slate-500 italic mt-4">“留下一段话，证明你曾来过这个灵感角落。”</p></div>;
 
-const thoughtsTimeline = [
-  { time: "Today, 10:24 AM", text: "灵感总是转瞬即逝，就像这层磨砂玻璃上的水汽。得赶紧把它写进代码里。" },
-  { time: "Yesterday, 23:15 PM", text: "重构了一遍路由逻辑，感觉就像把乱糟糟的房间打扫干净了，神清气爽。" },
-  { time: "Oct 24, 14:30 PM", text: "有时候，Bug 是系统在试图和你对话。倾听它，而不是对抗它。" },
-  { time: "Oct 22, 09:00 AM", text: "比起完美的架构，我更喜欢有生命力的代码。能跑起来，就有它的倔强。" },
-  { time: "Oct 18, 16:45 PM", text: "独立开发不仅是写代码，更是对产品灵魂的雕琢。" }
+const mixedTimeline = [
+  { type: "thought", time: "Today, 10:24 AM", text: "灵感总是转瞬即逝，就像这层磨砂玻璃上的水汽。得赶紧把它写进代码里。" },
+  { 
+    type: "guestbook", 
+    time: "Yesterday, 20:15 PM", 
+    user: "匿名极客", 
+    message: "这个卡片翻转的物理手感绝了！也是独立开发的吗？", 
+    reply: "哈哈感谢！用 Framer Motion 调了很久的弹簧参数，算是对交互的一点小执念 😆" 
+  },
+  { type: "thought", time: "Oct 24, 14:30 PM", text: "有时候，Bug 是系统在试图和你对话。倾听它，而不是对抗它。" },
+  { 
+    type: "guestbook", 
+    time: "Oct 22, 09:00 AM", 
+    user: "DesignLover", 
+    message: "首页的小黑精灵太可爱了！可以出个教程吗？", 
+    reply: "安排上了！之后会在数字花园里更新一期 SVG + Motion 的流体动画教程～" 
+  },
+  { type: "thought", time: "Oct 18, 16:45 PM", text: "比起完美的架构，我更喜欢有生命力的代码。能跑起来，就有它的倔强。" }
 ];
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState('home');
   const [pendingTab, setPendingTab] = useState<string | null>(null); 
+  const [spiritTarget, setSpiritTarget] = useState<string | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
   const [jumpType, setJumpType] = useState<'hop' | 'dive' | 'soar'>('hop'); 
   const [isLoaded, setIsLoaded] = useState(false);
-  const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, hop: null });
+  
+  // 💥 增加一个非常重要的 pageExit 定时器，用来错开页面销毁的时间
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, spirit: null, pageExit: null });
 
   const { scrollY } = useScroll();
   const rawRotate = useTransform(scrollY, [0, 2000], [0, 1080]); 
@@ -36,24 +51,42 @@ export default function Page() {
   useEffect(() => { setIsLoaded(true); }, []);
 
   const handleNavClick = (tabId: string) => {
-    if (tabId === activeTab) return;
+    // 这里做了一个小优化，用 pendingTab 判断，防止在跳跃过程中狂点
+    if (tabId === activeTab || pendingTab === tabId) return;
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
-    if (pendingTab === null) {
-        setJumpType('dive'); setIsPreparing(true);
-        timers.current.hop = setTimeout(() => {
-            setIsPreparing(false); setPendingTab(tabId); 
-            setTimeout(() => { setActiveTab(tabId); }, 50); 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 200);
-    } else {
-        setJumpType('hop'); setIsPreparing(false); setPendingTab(tabId); 
-        setTimeout(() => { 
-          setActiveTab(tabId); 
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 300);
-    }
-    timers.current.prepare = setTimeout(() => { setJumpType('soar'); setIsPreparing(true); }, 2700);
-    timers.current.jump = setTimeout(() => { setPendingTab(null); setIsPreparing(false); }, 3000); 
+    
+    // 1. 瞬间滚回顶部（不要在这里立马切换页面！）
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 2. 原地深蹲蓄力！
+    const isStartingFromPage = spiritTarget === null;
+    setIsPreparing(true);
+    setJumpType(isStartingFromPage ? 'dive' : 'hop');
+
+    // 3. 💥 核心修复：150ms 蓄力完成后，起飞的同时切换页面！
+    timers.current.spirit = setTimeout(() => {
+        setIsPreparing(false);      // 释放弹力
+        setSpiritTarget(tabId);     // 目标设定为导航栏
+        setPendingTab(tabId);       // 锁住新页面的位置
+        
+        // 💥 最关键的一步：延迟 50ms 切换页面！
+        // 保证小精灵从原名片脱离起飞后，原名片才开始销毁！这就彻底解决了你说的“没有起跳动作直接闪现”的Bug！
+        timers.current.pageExit = setTimeout(() => {
+            setActiveTab(tabId);
+        }, 50);
+    }, 150); 
+
+    // 4. 休息阶段：在导航栏待命 3 秒后，飞回名片
+    timers.current.prepare = setTimeout(() => {
+        setIsPreparing(true); // 回程深蹲
+        setJumpType(tabId === 'home' ? 'soar' : 'dive'); // 向上飞用 soar
+
+        timers.current.jump = setTimeout(() => {
+            setIsPreparing(false); // 释放起飞
+            setSpiritTarget(null); // 离开导航栏
+            setPendingTab(null);   // 降落到页面
+        }, 150);
+    }, 3150); // 150ms初次蓄力 + 3000ms休息
   };
 
   const navItems = [
@@ -67,11 +100,11 @@ export default function Page() {
     <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col">
       <LiquidFilters />
       
-      {/* 💥 全局核武器：直接用 global style 把整个网页身体（html/body）的橡皮筋回弹给封死！不再有顶部/底部的强制重绘卡顿！ */}
       <style dangerouslySetInnerHTML={{__html: `
-        html, body {
-          overscroll-behavior: none;
-          background-color: #FDFEFE;
+        html, body { overscroll-behavior: none; background-color: #FDFEFE; }
+        .frost-noise {
+           background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+           opacity: 0.04;
         }
         @keyframes ken-burns {
           0% { transform: scale(1.0) translate(0, 0); }
@@ -92,66 +125,101 @@ export default function Page() {
         style={{ rotate: springRotate, WebkitTransform: 'translateZ(0)' }} 
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        title="Release Tension (Back to Top)"
+        title="Release Tension"
       >
-        <div className="absolute top-1.5 w-1.5 h-1.5 bg-slate-800 rounded-full shadow-sm opacity-80 group-hover:bg-black transition-colors" />
+        <div className="absolute top-1.5 w-1.5 h-1.5 bg-slate-800 rounded-full shadow-sm opacity-80" />
         <div className="w-4 h-4 rounded-full border-[2px] border-slate-800/30 flex items-center justify-center">
            <div className="w-1 h-1 bg-slate-800/60 rounded-full" />
         </div>
       </motion.div>
 
-      <main className={`relative z-10 max-w-xl mx-auto w-full px-5 pb-40 pt-10 flex-1 transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0 translate-y-4'}`}>
+      <main className={`relative z-10 max-w-xl mx-auto w-full px-5 pb-32 pt-10 flex-1 transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0 translate-y-4'}`}>
         <AnimatePresence mode="wait">
           {activeTab === 'home' && (
             <motion.div key="home">
-               <HomeView onNavigate={handleNavClick} showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
+               <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
-               <motion.div className="w-full flex justify-center mt-16 mb-8 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
+               <motion.div className="w-full flex justify-center mt-2 mb-10 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
                  <div className="flex flex-col items-center gap-1.5">
-                   <span className="text-[9px] font-black tracking-widest uppercase text-slate-500">Scroll down to explore</span>
                    <ArrowDown size={14} className="text-slate-500" />
                  </div>
                </motion.div>
 
-               <div className="relative w-full pb-[20vh] mt-10">
+               <div className="relative w-full">
                  <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1px] bg-gradient-to-b from-white/0 via-white/40 to-white/0" />
 
-                 {thoughtsTimeline.map((thought, idx) => {
+                 {mixedTimeline.map((item, idx) => {
                     const isLeft = idx % 2 === 0;
                     const stickyTop = `${100 + idx * 12}px`; 
 
                     return (
-                      <div key={idx} className={`w-full flex ${isLeft ? 'justify-start' : 'justify-end'} mb-24 relative`}>
+                      <div key={idx} className={`w-full flex ${isLeft ? 'justify-start' : 'justify-end'} mb-16 relative`}>
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
                              <motion.div
-                               className="w-[220px] p-5 shadow-[0_25px_50px_-15px_rgba(0,0,0,0.15)] rounded-[24px] flex flex-col gap-2 border border-white/40 bg-white/40 backdrop-blur-lg"
-                               style={{ 
-                                  rotate: isLeft ? '-2deg' : '2deg', 
-                                  transform: 'translateZ(0)',
-                                  WebkitTransform: 'translateZ(0)',
-                               }}
+                               className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
+                               style={{ rotate: isLeft ? '-1.5deg' : '1.5deg', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                                initial={{ opacity: 0, y: 30 }}
                                whileInView={{ opacity: 1, y: 0 }}
                                viewport={{ margin: "50px", once: true }} 
                                transition={{ type: "spring", stiffness: 200, damping: 20 }}
                              >
-                               <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-800/40" />
-                                  <span className="text-[9px] font-mono font-bold text-slate-800/50 uppercase tracking-widest">
-                                    {thought.time}
-                                  </span>
-                               </div>
+                                <div className="px-5 py-3 border-b border-white/30 bg-white/20 flex items-center gap-2">
+                                  <div className={`w-1.5 h-1.5 rounded-full ${item.type === 'guestbook' ? 'bg-blue-400' : 'bg-slate-800/40'}`} />
+                                  <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-widest">{item.time}</span>
+                                </div>
 
-                               <p className="text-[12px] font-bold text-slate-800/90 leading-relaxed tracking-wide">
-                                 {thought.text}
-                               </p>
+                                {item.type === 'thought' ? (
+                                   <div className="p-5">
+                                      <p className="text-[13px] font-bold text-slate-800/90 leading-relaxed tracking-wide">{item.text}</p>
+                                   </div>
+                                ) : (
+                                   <div className="p-4 flex flex-col gap-3">
+                                      <div className="flex gap-3 items-start">
+                                         <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center shrink-0 border border-blue-200">
+                                            <User size={12} className="text-blue-500" />
+                                         </div>
+                                         <div className="flex-1 bg-white/60 rounded-[16px] rounded-tl-none p-3 shadow-sm border border-white/50">
+                                            <div className="text-[10px] font-bold text-slate-400 mb-1">{item.user}</div>
+                                            <p className="text-[12px] font-medium text-slate-700 leading-relaxed">{item.message}</p>
+                                         </div>
+                                      </div>
+                                      <div className="flex gap-3 items-start flex-row-reverse">
+                                         <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center shrink-0 shadow-md">
+                                            <Sparkles size={12} className="text-[#D9F99D]" />
+                                         </div>
+                                         <div className="flex-1 bg-slate-800 rounded-[16px] rounded-tr-none p-3 shadow-md">
+                                            <div className="text-[10px] font-bold text-slate-400 mb-1 flex justify-end">Leo's Reply</div>
+                                            <p className="text-[12px] font-medium text-white/90 leading-relaxed">{item.reply}</p>
+                                         </div>
+                                      </div>
+                                   </div>
+                                )}
                              </motion.div>
                          </div>
                       </div>
                     );
                  })}
+
+                 <div className="w-full flex justify-center pt-8 pb-20">
+                    <motion.div 
+                      className="group bg-white/60 sm:bg-white/40 sm:backdrop-blur-xl border border-white/60 rounded-[32px] p-6 flex items-center gap-5 cursor-pointer shadow-lg transition-all active:scale-[0.98]"
+                      onClick={() => handleNavClick('guestbook')}
+                      whileInView={{ scale: [0.9, 1], opacity: [0, 1] }}
+                      viewport={{ once: true }}
+                    >
+                      <div className="w-14 h-14 bg-slate-900 rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                        <MessageSquare size={24} className="text-white/90" />
+                      </div>
+                      <div className="pr-4">
+                        <div className="font-black text-slate-800 text-lg tracking-tight">留下你的足迹</div>
+                        <div className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-widest flex items-center gap-1">
+                          Go to Guestbook <ArrowDown size={10} className="-rotate-90" />
+                        </div>
+                      </div>
+                    </motion.div>
+                 </div>
                </div>
             </motion.div>
           )}
@@ -162,30 +230,48 @@ export default function Page() {
       </main>
 
       <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
-        <nav className="relative flex items-center p-2 rounded-full bg-[#1c1c1e]/60 backdrop-blur-[50px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <nav className="relative flex items-center p-1.5 rounded-full">
+          
+          <div 
+             className="absolute inset-0 z-0 rounded-full overflow-hidden border border-white/40 pointer-events-none"
+             style={{
+               background: "rgba(255, 255, 255, 0.25)",
+               backdropFilter: "blur(40px) saturate(200%) contrast(110%)",
+               boxShadow: "0 30px 60px -12px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 3px rgba(0,0,0,0.05)"
+             }}
+          >
+             <div className="absolute inset-0 frost-noise pointer-events-none" />
+          </div>
+
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
-            const isTarget = pendingTab === item.id;
+            const isHighlight = (pendingTab || activeTab) === item.id;
+            const showSpirit = spiritTarget === item.id;
             
             return (
-              <button key={item.id} onClick={() => handleNavClick(item.id)} className="relative z-10 flex flex-col items-center justify-center w-20 h-14 rounded-full transition-all cursor-pointer active:scale-95">
-                {isTarget && (
-                   <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-50">
-                      <VoidSpirit isNavigating={true} isPreparing={isPreparing} jumpType={jumpType} locationId={`nav-${item.id}`} />
-                   </div>
-                )}
-                <item.icon size={22} className={`transition-all duration-300 ${isActive ? 'text-white scale-110 drop-shadow-md' : 'text-white/30 group-hover:text-white/60'}`} />
-                <span className={`text-[9px] mt-1 font-bold tracking-tight transition-all ${isActive ? 'text-white opacity-100' : 'text-white/0 opacity-0'}`}>{item.label}</span>
+              <button key={item.id} onClick={() => handleNavClick(item.id)} className="relative z-10 flex flex-col items-center justify-center w-20 h-14 rounded-full transition-all cursor-pointer active:scale-95 group">
                 
-                {isActive && (
+                {/* 💥 彻底脱掉所有防弹衣！让自带居中系统的小精灵直接挂载！ */}
+                {/* 再也不会有父级定位冲突导致的闪现和悬浮了！ */}
+                {showSpirit && (
+                   <VoidSpirit isNavigating={true} isPreparing={isPreparing} jumpType={jumpType} locationId={`nav-${item.id}`} />
+                )}
+                
+                <item.icon size={22} className={`transition-all duration-300 relative z-10 ${isActive ? 'text-slate-900 scale-110' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                <span className={`text-[9px] mt-1 font-black tracking-tight transition-all uppercase relative z-10 ${isActive ? 'text-slate-900 opacity-100' : 'text-slate-400 opacity-0'}`}>
+                  {item.label}
+                </span>
+                
+                {isHighlight && (
                   <motion.div 
                     layoutId="nav-pill" 
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }} 
-                    className="absolute inset-0 z-[-1] rounded-full"
-                    style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.02))", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 20px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.3)" }}
-                  >
-                    <div className="absolute inset-0 rounded-full" style={{ filter: 'url(#liquid-distortion)' }} />
-                  </motion.div>
+                    transition={{ type: "spring", stiffness: 400, damping: 21, mass: 1 }} 
+                    className="absolute inset-0 z-0 rounded-full"
+                    style={{ 
+                      background: "linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.01) 100%)", 
+                      boxShadow: "inset 0 2px 6px rgba(0,0,0,0.05), 0 1px 2px rgba(255,255,255,0.4)" 
+                    }}
+                  />
                 )}
               </button>
             );
