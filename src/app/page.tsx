@@ -64,18 +64,22 @@ export default function Page() {
   ];
 
   return (
-    // 💥 终极修复 1：增加 overscroll-none！禁止 iOS 的橡皮筋回弹，彻底解决触顶/触底时的全屏重绘卡顿！
-    <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden overscroll-none flex flex-col">
+    <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col">
       <LiquidFilters />
       
-      <style>{`
+      {/* 💥 全局核武器：直接用 global style 把整个网页身体（html/body）的橡皮筋回弹给封死！不再有顶部/底部的强制重绘卡顿！ */}
+      <style dangerouslySetInnerHTML={{__html: `
+        html, body {
+          overscroll-behavior: none;
+          background-color: #FDFEFE;
+        }
         @keyframes ken-burns {
           0% { transform: scale(1.0) translate(0, 0); }
           50% { transform: scale(1.1) translate(-1%, -1%); }
           100% { transform: scale(1.0) translate(0, 0); }
         }
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
-      `}</style>
+      `}} />
 
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#FDFEFE]">
          <div className="absolute inset-0 bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />

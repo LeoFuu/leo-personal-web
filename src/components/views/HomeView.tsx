@@ -38,7 +38,6 @@ const IDCard = ({ controls }: { controls: any }) => (
      animate={controls}
   >
      <div className="relative ml-[52px] shrink-0">
-        {/* 💥 终极修复 2：加上 WebkitMaskImage 和 isolate，彻底锁死遮罩层，头像再也不会在滑动时变成方形了！ */}
         <div 
           className="w-14 h-14 rounded-full overflow-hidden bg-black/5 border-[2px] border-white shadow-sm"
           style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)', isolation: 'isolate' }}
@@ -70,9 +69,7 @@ const MetalClipFront = ({ controls }: { controls: any }) => (
        boxShadow: 'inset -1px -2px 4px rgba(0,0,0,0.2), 4px 8px 12px rgba(0,0,0,0.5)',
        rotate: -4,
      }}
-     style={{
-        WebkitBackfaceVisibility: 'hidden',
-     }}
+     style={{ WebkitBackfaceVisibility: 'hidden' }}
      animate={controls}
   >
       <div className="absolute top-[15%] bottom-[15%] left-[50%] w-[2px] bg-black/10 shadow-[inset_1px_0_1px_rgba(255,255,255,0.4)] -translate-x-1/2 rounded-full" />
@@ -86,9 +83,7 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
        return (
          <motion.div 
            key={id}
-           style={{
-             WebkitBackfaceVisibility: 'hidden',
-           }}
+           style={{ WebkitBackfaceVisibility: 'hidden' }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
@@ -97,8 +92,8 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
              zIndex: 30 - position * 10,
              opacity: position === 2 ? 0.8 : 1
            }}
-           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-           // 💥 终极修复 3：将移动端卡片的巨型 shadow-2xl 彻底降级为 shadow-md！平移旋转小阴影不费吹灰之力，“慢动作”立刻消失！
+           // 💥 速度升级：硬度提升到 500，阻尼降低，让卡片像实体牌一样“啪”地弹过去！
+           transition={{ type: 'spring', stiffness: 500, damping: 25, mass: 0.8 }}
            className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-md sm:shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between overflow-hidden border border-white/20`}
          >
             <div className="flex justify-between items-start pl-6 relative z-10">
@@ -141,37 +136,22 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
-    clipControls.start({
-        rotate: -25, 
-        x: -5,
-        y: -5,
-        transition: { duration: 0.15, ease: 'easeOut' }
-    });
-    
-    idCardControls.start({
-        rotate: -9,
-        y: -1,
-        transition: { duration: 0.15, ease: 'easeOut' }
-    });
+    // 💥 极速流程：张开时间从 0.15 缩减为 0.08！
+    clipControls.start({ rotate: -25, x: -5, y: -5, transition: { duration: 0.08, ease: 'easeOut' } });
+    idCardControls.start({ rotate: -9, y: -1, transition: { duration: 0.08, ease: 'easeOut' } });
 
-    await new Promise(r => setTimeout(r, 100));
+    // 💥 等待时间从 100 狂砍到 40ms！
+    await new Promise(r => setTimeout(r, 40));
     setDeck(prev => [prev[1], prev[2], prev[0]]);
-    await new Promise(r => setTimeout(r, 250));
-
-    clipControls.start({
-        rotate: -4, 
-        x: 0,
-        y: 0,
-        transition: { type: 'spring', stiffness: 400, damping: 20 }
-    });
     
-    idCardControls.start({
-        rotate: -6,
-        y: 0,
-        transition: { type: 'spring', stiffness: 500, damping: 12 }
-    });
+    // 💥 漫长的 250ms 慢动作等待时间，狂砍到 60ms！
+    await new Promise(r => setTimeout(r, 60));
 
-    setIsAnimating(false);
+    clipControls.start({ rotate: -4, x: 0, y: 0, transition: { type: 'spring', stiffness: 600, damping: 20 } });
+    idCardControls.start({ rotate: -6, y: 0, transition: { type: 'spring', stiffness: 600, damping: 15 } });
+
+    // 释放锁
+    setTimeout(() => setIsAnimating(false), 100);
   };
 
   return (
