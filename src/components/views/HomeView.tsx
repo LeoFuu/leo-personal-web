@@ -33,6 +33,7 @@ const IDCard = ({ controls }: { controls: any }) => (
      style={{
         transformOrigin: '20px 65px',
         WebkitBackfaceVisibility: 'hidden',
+        willChange: 'transform',
      }}
      initial={{ rotate: -6 }} 
      animate={controls}
@@ -69,7 +70,10 @@ const MetalClipFront = ({ controls }: { controls: any }) => (
        boxShadow: 'inset -1px -2px 4px rgba(0,0,0,0.2), 4px 8px 12px rgba(0,0,0,0.5)',
        rotate: -4,
      }}
-     style={{ WebkitBackfaceVisibility: 'hidden' }}
+     style={{ 
+        WebkitBackfaceVisibility: 'hidden',
+        willChange: 'transform',
+     }}
      animate={controls}
   >
       <div className="absolute top-[15%] bottom-[15%] left-[50%] w-[2px] bg-black/10 shadow-[inset_1px_0_1px_rgba(255,255,255,0.4)] -translate-x-1/2 rounded-full" />
@@ -83,7 +87,13 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
        return (
          <motion.div 
            key={id}
-           style={{ WebkitBackfaceVisibility: 'hidden' }}
+           style={{ 
+             WebkitBackfaceVisibility: 'hidden',
+             // 💥 加上 willChange 提示显卡提前分配加速通道
+             willChange: 'transform, opacity, z-index',
+             // 💥 现在手机端已经去掉了模糊，这里就可以大胆重新加上强制 3D 加速！
+             transform: 'translateZ(0)',
+           }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
@@ -92,10 +102,18 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
              zIndex: 30 - position * 10,
              opacity: position === 2 ? 0.8 : 1
            }}
-           // 💥 速度升级：硬度提升到 500，阻尼降低，让卡片像实体牌一样“啪”地弹过去！
            transition={{ type: 'spring', stiffness: 500, damping: 25, mass: 0.8 }}
-           className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-md sm:shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between overflow-hidden border border-white/20`}
+           // 💥 极其关键的一步：从 className 中删除了 overflow-hidden！外层动画容器终于解开了束缚！
+           className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-md sm:shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between border border-white/20`}
          >
+            {/* 💥 骨肉分离法：新建一个隐形的绝对定位内胆（absolute inset-0），专门用来放裁剪（overflow-hidden）和背景数字 */}
+            {/* 它自己不参与动画计算，所以绝对不会拖累 GPU！ */}
+            <div className="absolute inset-0 overflow-hidden rounded-[48px] pointer-events-none">
+               <div className="absolute -bottom-6 -right-6 text-[180px] text-black/5 font-black tracking-tighter select-none">
+                 {id + 1}
+               </div>
+            </div>
+
             <div className="flex justify-between items-start pl-6 relative z-10">
                <div className="bg-white/90 sm:bg-white/50 backdrop-blur-none sm:backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-sm">
                   Project {id + 1}
@@ -115,10 +133,6 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
                  </p>
                </div>
             </div>
-            
-            <div className="absolute -bottom-6 -right-6 text-[180px] text-black/5 font-black tracking-tighter pointer-events-none select-none">
-              {id + 1}
-            </div>
          </motion.div>
        );
     })}
@@ -136,21 +150,16 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
-    // 💥 极速流程：张开时间从 0.15 缩减为 0.08！
     clipControls.start({ rotate: -25, x: -5, y: -5, transition: { duration: 0.08, ease: 'easeOut' } });
     idCardControls.start({ rotate: -9, y: -1, transition: { duration: 0.08, ease: 'easeOut' } });
 
-    // 💥 等待时间从 100 狂砍到 40ms！
     await new Promise(r => setTimeout(r, 40));
     setDeck(prev => [prev[1], prev[2], prev[0]]);
-    
-    // 💥 漫长的 250ms 慢动作等待时间，狂砍到 60ms！
     await new Promise(r => setTimeout(r, 60));
 
     clipControls.start({ rotate: -4, x: 0, y: 0, transition: { type: 'spring', stiffness: 600, damping: 20 } });
     idCardControls.start({ rotate: -6, y: 0, transition: { type: 'spring', stiffness: 600, damping: 15 } });
 
-    // 释放锁
     setTimeout(() => setIsAnimating(false), 100);
   };
 
