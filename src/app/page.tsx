@@ -76,15 +76,18 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}</style>
 
+      {/* ========================================================
+          🚀 性能优化 1：移除了会导致 GPU 算力翻倍的 mix-blend-overlay
+          ======================================================== */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#FDFEFE]">
          <div className="absolute inset-0 bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
-         <div className="absolute inset-0 bg-white/30 backdrop-blur-[45px] mix-blend-overlay" />
+         <div className="absolute inset-0 bg-white/30 backdrop-blur-[45px]" />
       </div>
 
       <motion.div
         className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        style={{ rotate: springRotate, WebkitTransform: 'translateZ(0)' }} // 加入 GPU 加速
+        style={{ rotate: springRotate, WebkitTransform: 'translateZ(0)' }} 
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         title="Release Tension (Back to Top)"
@@ -120,18 +123,18 @@ export default function Page() {
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
+                             {/* ========================================================
+                                 🚀 性能优化 2：撤销内联样式的动态计算，改用 Tailwind 静态类
+                                 🚀 性能优化 3：移除 will-change，防止滑动堆叠时显存爆炸
+                                 ======================================================== */}
                              <motion.div
-                               className="w-[220px] p-5 shadow-[0_25px_50px_-15px_rgba(0,0,0,0.15)] rounded-[24px] flex flex-col gap-2 border border-white/40"
+                               // 使用 Tailwind 的 bg-white/40 和 backdrop-blur-lg 让浏览器进行底层硬件优化
+                               className="w-[220px] p-5 shadow-[0_25px_50px_-15px_rgba(0,0,0,0.15)] rounded-[24px] flex flex-col gap-2 border border-white/40 bg-white/40 backdrop-blur-lg"
                                style={{ 
                                   rotate: isLeft ? '-2deg' : '2deg', 
-                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%)',
-                                  backdropFilter: 'blur(20px)',
-                                  WebkitBackdropFilter: 'blur(20px)',
-                                  // 💥 终极移动端性能锁：强制创建一个纯粹的 3D 图层，防止回滚时重新计算模糊
-                                  willChange: 'transform, opacity',
-                                  transform: 'translate3d(0, 0, 0)',
-                                  WebkitTransform: 'translate3d(0, 0, 0)',
-                                  WebkitBackfaceVisibility: 'hidden',
+                                  // 保留基础的 3D 层叠防穿透
+                                  transform: 'translateZ(0)',
+                                  WebkitTransform: 'translateZ(0)',
                                }}
                                initial={{ opacity: 0, y: 30 }}
                                whileInView={{ opacity: 1, y: 0 }}
@@ -162,6 +165,7 @@ export default function Page() {
         </AnimatePresence>
       </main>
 
+      {/* 底部导航保持不变 */}
       <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
         <nav className="relative flex items-center p-2 rounded-full bg-[#1c1c1e]/60 backdrop-blur-[50px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           {navItems.map((item) => {
