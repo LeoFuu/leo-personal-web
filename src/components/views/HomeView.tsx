@@ -1,5 +1,5 @@
 // src/components/views/HomeView.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { Github, Twitter, Linkedin, Heart, Plus, MessageSquare, ArrowRight, Verified } from 'lucide-react';
 import { HolographicAvatar } from '../ui/HolographicAvatar';
@@ -23,18 +23,18 @@ const MetalClipBack = () => (
        background: 'linear-gradient(90deg, #374151 0%, #6B7280 40%, #1F2937 100%)', 
        boxShadow: 'inset -2px -2px 4px rgba(0,0,0,0.4), 0 5px 10px rgba(0,0,0,0.6)',
        transform: 'rotate(-4deg)',
-       // 💥 移除了会导致白块的 over-hints
      }} 
   />
 );
 
 const IDCard = ({ controls }: { controls: any }) => (
   <motion.div 
-     className="absolute top-[-90px] left-[0px] z-40 bg-[#F8F9FA] rounded-[36px] w-[280px] h-[95px] flex items-center shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)] border border-white/50"
+     // 💥 优化点 1：将移动端极其耗费性能的巨型阴影降级为 shadow-xl，桌面端保留巨型阴影
+     className="absolute top-[-90px] left-[0px] z-40 bg-[#F8F9FA] rounded-[36px] w-[280px] h-[95px] flex items-center shadow-xl sm:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)] border border-white/50"
      style={{
         transformOrigin: '20px 65px',
-        // 💥 精准技术修复：只保留 bare minimum hint，防止 flushing
-        willChange: 'transform', 
+        // 💥 优化点 2：开启隔离模式，强制手机把这张名片当成独立图层处理，防止渲染残缺
+        isolation: 'isolate',
      }}
      initial={{ rotate: -6 }} 
      animate={controls}
@@ -68,9 +68,6 @@ const MetalClipFront = ({ controls }: { controls: any }) => (
        boxShadow: 'inset -1px -2px 4px rgba(0,0,0,0.2), 4px 8px 12px rgba(0,0,0,0.5)',
        rotate: -4,
      }}
-     style={{
-        willChange: 'transform', 
-     }}
      animate={controls}
   >
       <div className="absolute top-[15%] bottom-[15%] left-[50%] w-[2px] bg-black/10 shadow-[inset_1px_0_1px_rgba(255,255,255,0.4)] -translate-x-1/2 rounded-full" />
@@ -84,9 +81,6 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
        return (
          <motion.div 
            key={id}
-           style={{
-             willChange: 'transform', 
-           }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
@@ -99,7 +93,7 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
            className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between overflow-hidden border border-white/20`}
          >
             <div className="flex justify-between items-start pl-6 relative z-10">
-               <div className="bg-white/50 backdrop-blur-lg px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-inner">
+               <div className="bg-white/50 backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-inner">
                   Project {id + 1}
                </div>
                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-xl">
@@ -108,9 +102,6 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
             </div>
             
             <div className="mt-auto relative z-10">
-               {/* 💥 神奇的视觉欺骗：
-                  手机端：bg-white/70 + backdrop-blur-none (彻底关闭模糊计算，直接变成贴纸，可以被渲染"固定"住，彻底消灭切换掉帧！)
-                  电脑端 (sm 以上)：bg-white/40 + sm:backdrop-blur-lg (恢复顶级物理磨砂) */}
                <div className="p-6 rounded-[32px] border border-white/50 shadow-sm relative overflow-hidden bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg">
                  <h2 className={`text-3xl font-black ${TEXT_COLORS[id]} leading-tight mb-2 tracking-tight`}>
                     {projects[id]?.title || "Upcoming Project"}
@@ -137,18 +128,13 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
   const clipControls = useAnimationControls();
   const idCardControls = useAnimationControls(); 
 
-  useEffect(() => {
-    idCardControls.start({
-        rotate: [-6, -4, -6],
-        transition: { duration: 6, repeat: Infinity, ease: "easeInOut" }
-    });
-  }, [idCardControls]);
+  // 💥 优化点 3：彻底删除了 useEffect 中让名片无限摇晃的代码！
+  // 现在的名片在不点击时是 100% 静态的，手机显卡可以完美给它拍“快照”缓存下来，绝不会再卡顿丢失！
 
   const handleNextCard = async () => {
     if (isAnimating) return;
     setIsAnimating(true);
 
-    // 💥 移除了会导致耗费性能重绘的 boxShadow 动画，只保留 transform 动画
     clipControls.start({
         rotate: -25, 
         x: -5,
@@ -173,15 +159,11 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
         transition: { type: 'spring', stiffness: 400, damping: 20 }
     });
     
+    // 💥 优化点 4：震颤结束后，直接停留在 -6 度，不再进入死循环
     idCardControls.start({
         rotate: -6,
         y: 0,
         transition: { type: 'spring', stiffness: 500, damping: 12 }
-    }).then(() => {
-        idCardControls.start({
-            rotate: [-6, -4, -6],
-            transition: { duration: 6, repeat: Infinity, ease: "easeInOut" }
-        });
     });
 
     setIsAnimating(false);
