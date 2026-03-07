@@ -20,7 +20,7 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, showSpiritHere, isPr
        <HolographicAvatar className="w-24 h-24 shrink-0" />
        <div className="flex-1 min-w-0">
           <div className="flex justify-between items-center mb-3">
-             <h1 className="text-2xl font-bold text-white tracking-tight">Leo Fu</h1>
+             <h1 className="text-2xl font-bold text-white tracking-tight">付昱淋</h1>
              <div className="flex gap-3 opacity-30"><Github size={16} /><Twitter size={16} /><Linkedin size={16} /></div>
           </div>
           <div className="bg-white/5 rounded-2xl p-3 border border-white/5 relative">
