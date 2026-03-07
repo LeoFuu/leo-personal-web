@@ -84,7 +84,7 @@ export default function Page() {
       <motion.div
         className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        style={{ rotate: springRotate }} 
+        style={{ rotate: springRotate, WebkitTransform: 'translateZ(0)' }} // 加入 GPU 加速
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         title="Release Tension (Back to Top)"
@@ -119,11 +119,7 @@ export default function Page() {
                       <div key={idx} className={`w-full flex ${isLeft ? 'justify-start' : 'justify-end'} mb-24 relative`}>
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
-                         {/* 💥 手术刀 1：纯净的 CSS sticky 容器 (骨)
-                             只负责物理吸附，绝对没有 Framer Motion 干扰，告别抖动！*/}
                          <div className="sticky z-20" style={{ top: stickyTop }}>
-                             
-                             {/* 💥 手术刀 2：内部独立的动画层 (肉) */}
                              <motion.div
                                className="w-[220px] p-5 shadow-[0_25px_50px_-15px_rgba(0,0,0,0.15)] rounded-[24px] flex flex-col gap-2 border border-white/40"
                                style={{ 
@@ -131,11 +127,14 @@ export default function Page() {
                                   background: 'linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%)',
                                   backdropFilter: 'blur(20px)',
                                   WebkitBackdropFilter: 'blur(20px)',
-                                  willChange: 'transform, opacity' // 💥 开启 GPU 硬件加速
+                                  // 💥 终极移动端性能锁：强制创建一个纯粹的 3D 图层，防止回滚时重新计算模糊
+                                  willChange: 'transform, opacity',
+                                  transform: 'translate3d(0, 0, 0)',
+                                  WebkitTransform: 'translate3d(0, 0, 0)',
+                                  WebkitBackfaceVisibility: 'hidden',
                                }}
                                initial={{ opacity: 0, y: 30 }}
                                whileInView={{ opacity: 1, y: 0 }}
-                               // 💥 手术刀 3：once: true！一旦渲染不再反复销毁，彻底解决快速滑动时不显示、卡顿的问题！
                                viewport={{ margin: "50px", once: true }} 
                                transition={{ type: "spring", stiffness: 200, damping: 20 }}
                              >
@@ -150,7 +149,6 @@ export default function Page() {
                                  {thought.text}
                                </p>
                              </motion.div>
-
                          </div>
                       </div>
                     );

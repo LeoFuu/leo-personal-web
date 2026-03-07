@@ -15,9 +15,6 @@ interface ViewProps {
 const CARD_COLORS = ['bg-[#D9F99D]', 'bg-[#E9D5FF]', 'bg-[#BAE6FD]'];
 const TEXT_COLORS = ['text-[#3F6212]', 'text-[#6B21A8]', 'text-[#0369A1]'];
 
-/* ========================================================================
-   🧩 解耦模块 1：金属背夹 (Z-20)
-   ======================================================================== */
 const MetalClipBack = () => (
   <div 
      className="absolute z-20 pointer-events-none"
@@ -32,18 +29,16 @@ const MetalClipBack = () => (
   />
 );
 
-/* ========================================================================
-   🧩 解耦模块 2：名片 ID Card (Z-40)
-   💥 升级：去掉了静态的 tailwind rotate，改为 motion.div 接受物理引擎控制
-   ======================================================================== */
 const IDCard = ({ controls }: { controls: any }) => (
   <motion.div 
      className="absolute top-[-90px] left-[0px] z-40 bg-[#F8F9FA] rounded-[36px] w-[280px] h-[95px] flex items-center shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)] border border-white/50"
      style={{
-        // 💥 核心物理逻辑：将旋转锚点精确设置在“金属夹子咬合的中心位置”
-        transformOrigin: '20px 65px' 
+        transformOrigin: '20px 65px',
+        // 💥 开启硬件加速，防止在移动端呼吸动画导致重绘
+        willChange: 'transform',
+        WebkitBackfaceVisibility: 'hidden',
      }}
-     initial={{ rotate: -6 }} // 初始角度依然完美保持 -6 度
+     initial={{ rotate: -6 }} 
      animate={controls}
   >
      <div className="relative ml-[52px] shrink-0">
@@ -66,9 +61,6 @@ const IDCard = ({ controls }: { controls: any }) => (
   </motion.div>
 );
 
-/* ========================================================================
-   🧩 解耦模块 3：前置动态夹片 (Z-50)
-   ======================================================================== */
 const MetalClipFront = ({ controls }: { controls: any }) => (
   <motion.div 
      className="absolute z-50 pointer-events-none origin-top"
@@ -89,9 +81,6 @@ const MetalClipFront = ({ controls }: { controls: any }) => (
   </motion.div>
 );
 
-/* ========================================================================
-   🧩 解耦模块 4：物理轮换项目卡片组 (Z-30)
-   ======================================================================== */
 const ProjectDeck = ({ deck }: { deck: number[] }) => (
   <>
     {[0, 1, 2].map((id) => {
@@ -99,6 +88,12 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
        return (
          <motion.div 
            key={id}
+           style={{
+             // 💥 强制开启卡片层的 3D 硬件加速，大幅减少手机上的切换掉帧
+             willChange: 'transform',
+             WebkitTransform: 'translateZ(0)',
+             WebkitBackfaceVisibility: 'hidden',
+           }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
@@ -139,47 +134,13 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
   </>
 );
 
-/* ========================================================================
-   🧩 解耦模块 5：方案A - 背景磨砂玻璃便利贴 (Z-39)
-   ======================================================================== */
-const BackgroundStickyNote = () => (
-  <motion.div
-    className="absolute z-39 w-[150px] p-4 flex flex-col gap-2 rounded-xl border border-white/40 shadow-[0_15px_35px_-10px_rgba(0,0,0,0.2)]"
-    style={{
-      top: '-130px',     
-      left: '10px',      
-      rotate: '6deg',      
-      background: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 100%)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-    }}
-    whileHover={{ scale: 1.05, rotate: 8, y: 10, transition: { type: 'spring', stiffness: 300 } }} 
-  >
-    <div 
-      className="absolute top-[-8px] left-1/2 -translate-x-1/2 w-10 h-4 bg-white/60 backdrop-blur-md border border-white/40 shadow-sm rounded-sm" 
-      style={{ rotate: '-4deg' }} 
-    />
-    <p className="text-[11px] leading-relaxed font-semibold text-slate-800/90 italic mt-1">
-       "{thoughts[0]?.content || '独立开发不仅是写代码，更是对产品灵魂的雕琢。'}"
-    </p>
-    <div className="text-[8px] font-mono font-bold text-slate-800/40 text-right uppercase tracking-widest mt-1">
-       Daily Mood
-    </div>
-  </motion.div>
-);
-
-/* ========================================================================
-   🚀 主视图容器
-   ======================================================================== */
 export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
   const [deck, setDeck] = useState([0, 1, 2]); 
   const [isAnimating, setIsAnimating] = useState(false);
   
-  // 💥 为夹子和名片分别声明物理控制器
   const clipControls = useAnimationControls();
   const idCardControls = useAnimationControls(); 
 
-  // 💥 闲置状态下，让名片随风微微晃动 (环境呼吸感)
   useEffect(() => {
     idCardControls.start({
         rotate: [-6, -4, -6],
@@ -191,15 +152,14 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
-    // 1. 夹子张开时
+    // 💥 修复点击卡顿核心：去掉了耗费性能的 boxShadow 重绘动画，只保留 transform 动画
     clipControls.start({
         rotate: -25, 
         x: -5,
         y: -5,
-        boxShadow: 'inset -1px -2px 3px rgba(0,0,0,0.3), 10px 15px 20px rgba(0,0,0,0.4)',
         transition: { duration: 0.15, ease: 'easeOut' }
     });
-    // 💥 名片失去夹紧力，微微往下垂 (增加角度)
+    
     idCardControls.start({
         rotate: -9,
         y: -1,
@@ -210,15 +170,14 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
     setDeck(prev => [prev[1], prev[2], prev[0]]);
     await new Promise(r => setTimeout(r, 250));
 
-    // 2. 夹子狠狠咬合时
+    // 💥 恢复时同样不触碰 boxShadow，保持丝滑回弹
     clipControls.start({
         rotate: -4, 
         x: 0,
         y: 0,
-        boxShadow: 'inset -1px -2px 4px rgba(0,0,0,0.2), 4px 8px 12px rgba(0,0,0,0.5)',
         transition: { type: 'spring', stiffness: 400, damping: 20 }
     });
-    // 💥 名片受到物理撞击，带有弹簧效果的震颤，然后恢复闲置晃动
+    
     idCardControls.start({
         rotate: -6,
         y: 0,
@@ -241,12 +200,9 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
     >
       <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
         <MetalClipBack />
-        {/* 💥 将控制器传入名片 */}
         <IDCard controls={idCardControls} />
         <MetalClipFront controls={clipControls} />
         <ProjectDeck deck={deck} />
-        
-        <BackgroundStickyNote />
       </div>
 
       <div className="w-full mt-12 space-y-4 z-10 relative">
