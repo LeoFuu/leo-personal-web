@@ -3,6 +3,60 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 新增：定义深邃星空背景 */
+@layer base {
+  body {
+    /* 💥 关键修改：从黑底改为哑光板岩灰，并引入细腻的无缝磨砂纹理 */
+    @apply antialiased text-gray-200;
+    
+    /* 1. 哑光灰色底色，接近深色混凝土 */
+    background-color: #0C0C0E;
+    
+    /* 2. 高质量、无缝、超细腻的噪点磨砂纹理 (我为你提供一张免费的图床链接) */
+    background-image: url('https://w.wallhaven.cc/full/xl/wallhaven-xly66m.png');
+    background-repeat: repeat;
+    background-size: 300px; /* 控制磨砂颗粒的大小 */
+    background-attachment: fixed;
+    
+    /* 3. 给背景加上一层极淡的、有体积感的渐变光，增加深度 */
+    background-blend-mode: overlay;
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 50%, rgba(0,0,0,0.2) 100%), url('https://w.wallhaven.cc/full/xl/wallhaven-xly66m.png');
+  }
+}
+
+/* 新增：定义核心毛玻璃卡片与 GPU 硬件加速 */
+/* src/app/globals.css */
+
+/* ... (保留上面的 @layer base) ... */
+
+@layer components {
+  .vibrant-glass-card {
+    /* 💥 超大圆角，极清透的背景色，让背后的青柠色和紫色透过来 */
+    @apply relative overflow-hidden bg-white/[0.04] backdrop-blur-[40px] transition-all duration-500 ease-out;
+    border-radius: 40px; /* 超级大圆角 */
+    
+    /* 3D 质感的核心：极深的外阴影 + 顶部/侧边的高光 */
+    box-shadow: 
+      0 30px 60px -15px rgba(0, 0, 0, 0.7), /* 制造距离感极强的立体悬浮 */
+      inset 0 2px 2px rgba(255, 255, 255, 0.2), /* 顶部的高光反光线 */
+      inset 2px 0 4px rgba(255, 255, 255, 0.05); /* 左侧的微弱反光 */
+      
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  .vibrant-glass-card:active {
+    @apply scale-[0.97] bg-white/[0.06];
+    box-shadow: 
+      0 10px 30px -10px rgba(0, 0, 0, 0.8), 
+      inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* ... (保留底部的 @layer utilities) ... */
+
+/* 原有代码：完美保留你的隐藏滚动条功能 */
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

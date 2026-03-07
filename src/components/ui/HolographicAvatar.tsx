@@ -12,7 +12,7 @@ export const HolographicAvatar = ({ className = "w-40 h-40" }: { className?: str
             // 【架构师警告】这里千万不要再写本地路径了！我们用一个绝对不会出错的网络备用图打底
             e.currentTarget.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Leo&backgroundColor=transparent&clothing=blazerAndShirt&clothingColor=262e33";
           }}
-          alt="Leo Fu" 
+          alt="付昱淋" 
           // 删除了灰度滤镜，让你的头像保持原有色彩
           className="w-full h-full object-cover opacity-90"
         />
