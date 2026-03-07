@@ -1,5 +1,5 @@
 // src/components/views/HomeView.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { Github, Twitter, Linkedin, Heart, Plus, MessageSquare, ArrowRight, Verified } from 'lucide-react';
 import { HolographicAvatar } from '../ui/HolographicAvatar';
@@ -29,12 +29,13 @@ const MetalClipBack = () => (
 
 const IDCard = ({ controls }: { controls: any }) => (
   <motion.div 
-     // 💥 优化点 1：将移动端极其耗费性能的巨型阴影降级为 shadow-xl，桌面端保留巨型阴影
-     className="absolute top-[-90px] left-[0px] z-40 bg-[#F8F9FA] rounded-[36px] w-[280px] h-[95px] flex items-center shadow-xl sm:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)] border border-white/50"
+     // 💥 移动端降级 1：取消巨型阴影，改用普通 shadow-lg，避免 GPU 绘制崩溃
+     className="absolute top-[-90px] left-[0px] z-40 bg-[#F8F9FA] rounded-[36px] w-[280px] h-[95px] flex items-center shadow-lg sm:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)] border border-white/50"
      style={{
         transformOrigin: '20px 65px',
-        // 💥 优化点 2：开启隔离模式，强制手机把这张名片当成独立图层处理，防止渲染残缺
-        isolation: 'isolate',
+        // 💥 恢复 3D 硬件加速，防止慢动作，同时用 backfaceVisibility 锁定图层防止白块
+        WebkitTransform: 'translate3d(0, 0, 0)',
+        WebkitBackfaceVisibility: 'hidden',
      }}
      initial={{ rotate: -6 }} 
      animate={controls}
@@ -68,6 +69,10 @@ const MetalClipFront = ({ controls }: { controls: any }) => (
        boxShadow: 'inset -1px -2px 4px rgba(0,0,0,0.2), 4px 8px 12px rgba(0,0,0,0.5)',
        rotate: -4,
      }}
+     style={{
+        WebkitTransform: 'translate3d(0, 0, 0)',
+        WebkitBackfaceVisibility: 'hidden',
+     }}
      animate={controls}
   >
       <div className="absolute top-[15%] bottom-[15%] left-[50%] w-[2px] bg-black/10 shadow-[inset_1px_0_1px_rgba(255,255,255,0.4)] -translate-x-1/2 rounded-full" />
@@ -81,6 +86,11 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
        return (
          <motion.div 
            key={id}
+           style={{
+             // 💥 恢复 3D 硬件加速，解决切牌时的“慢动作”掉帧问题
+             WebkitTransform: 'translate3d(0, 0, 0)',
+             WebkitBackfaceVisibility: 'hidden',
+           }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
@@ -90,10 +100,12 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
              opacity: position === 2 ? 0.8 : 1
            }}
            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-           className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between overflow-hidden border border-white/20`}
+           // 💥 移动端降级 2：取消巨型阴影，改用普通 shadow-2xl
+           className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-2xl sm:shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between overflow-hidden border border-white/20`}
          >
             <div className="flex justify-between items-start pl-6 relative z-10">
-               <div className="bg-white/50 backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-inner">
+               {/* 💥 移动端降级 3：彻底干掉小标签的 blur，使用不透明白色 bg-white/90，防止文字消失！桌面端保留 sm:backdrop-blur-md */}
+               <div className="bg-white/90 sm:bg-white/50 backdrop-blur-none sm:backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-sm">
                   Project {id + 1}
                </div>
                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-xl">
@@ -102,6 +114,7 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
             </div>
             
             <div className="mt-auto relative z-10">
+               {/* 💥 移动端降级 4：彻底干掉内容区的 blur，使用 bg-white/70 伪装玻璃，桌面端保留 sm:backdrop-blur-lg */}
                <div className="p-6 rounded-[32px] border border-white/50 shadow-sm relative overflow-hidden bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg">
                  <h2 className={`text-3xl font-black ${TEXT_COLORS[id]} leading-tight mb-2 tracking-tight`}>
                     {projects[id]?.title || "Upcoming Project"}
@@ -127,9 +140,6 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
   
   const clipControls = useAnimationControls();
   const idCardControls = useAnimationControls(); 
-
-  // 💥 优化点 3：彻底删除了 useEffect 中让名片无限摇晃的代码！
-  // 现在的名片在不点击时是 100% 静态的，手机显卡可以完美给它拍“快照”缓存下来，绝不会再卡顿丢失！
 
   const handleNextCard = async () => {
     if (isAnimating) return;
@@ -159,7 +169,6 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate }) => {
         transition: { type: 'spring', stiffness: 400, damping: 20 }
     });
     
-    // 💥 优化点 4：震颤结束后，直接停留在 -6 度，不再进入死循环
     idCardControls.start({
         rotate: -6,
         y: 0,
