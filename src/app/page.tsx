@@ -64,7 +64,8 @@ export default function Page() {
   ];
 
   return (
-    <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col">
+    // 💥 终极修复 1：增加 overscroll-none！禁止 iOS 的橡皮筋回弹，彻底解决触顶/触底时的全屏重绘卡顿！
+    <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden overscroll-none flex flex-col">
       <LiquidFilters />
       
       <style>{`
@@ -76,9 +77,6 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}</style>
 
-      {/* ========================================================
-          🚀 性能优化 1：移除了会导致 GPU 算力翻倍的 mix-blend-overlay
-          ======================================================== */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#FDFEFE]">
          <div className="absolute inset-0 bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
          <div className="absolute inset-0 bg-white/30 backdrop-blur-[45px]" />
@@ -123,16 +121,10 @@ export default function Page() {
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
-                             {/* ========================================================
-                                 🚀 性能优化 2：撤销内联样式的动态计算，改用 Tailwind 静态类
-                                 🚀 性能优化 3：移除 will-change，防止滑动堆叠时显存爆炸
-                                 ======================================================== */}
                              <motion.div
-                               // 使用 Tailwind 的 bg-white/40 和 backdrop-blur-lg 让浏览器进行底层硬件优化
                                className="w-[220px] p-5 shadow-[0_25px_50px_-15px_rgba(0,0,0,0.15)] rounded-[24px] flex flex-col gap-2 border border-white/40 bg-white/40 backdrop-blur-lg"
                                style={{ 
                                   rotate: isLeft ? '-2deg' : '2deg', 
-                                  // 保留基础的 3D 层叠防穿透
                                   transform: 'translateZ(0)',
                                   WebkitTransform: 'translateZ(0)',
                                }}
@@ -165,7 +157,6 @@ export default function Page() {
         </AnimatePresence>
       </main>
 
-      {/* 底部导航保持不变 */}
       <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
         <nav className="relative flex items-center p-2 rounded-full bg-[#1c1c1e]/60 backdrop-blur-[50px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           {navItems.map((item) => {

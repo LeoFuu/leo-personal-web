@@ -29,19 +29,20 @@ const MetalClipBack = () => (
 
 const IDCard = ({ controls }: { controls: any }) => (
   <motion.div 
-     // 💥 移动端降级 1：取消巨型阴影，改用普通 shadow-lg，避免 GPU 绘制崩溃
      className="absolute top-[-90px] left-[0px] z-40 bg-[#F8F9FA] rounded-[36px] w-[280px] h-[95px] flex items-center shadow-lg sm:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)] border border-white/50"
      style={{
         transformOrigin: '20px 65px',
-        // 💥 恢复 3D 硬件加速，防止慢动作，同时用 backfaceVisibility 锁定图层防止白块
-        WebkitTransform: 'translate3d(0, 0, 0)',
         WebkitBackfaceVisibility: 'hidden',
      }}
      initial={{ rotate: -6 }} 
      animate={controls}
   >
      <div className="relative ml-[52px] shrink-0">
-        <div className="w-14 h-14 rounded-full overflow-hidden bg-black/5 border-[2px] border-white shadow-sm">
+        {/* 💥 终极修复 2：加上 WebkitMaskImage 和 isolate，彻底锁死遮罩层，头像再也不会在滑动时变成方形了！ */}
+        <div 
+          className="w-14 h-14 rounded-full overflow-hidden bg-black/5 border-[2px] border-white shadow-sm"
+          style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)', isolation: 'isolate' }}
+        >
            <HolographicAvatar className="w-full h-full scale-125" />
         </div>
      </div>
@@ -70,7 +71,6 @@ const MetalClipFront = ({ controls }: { controls: any }) => (
        rotate: -4,
      }}
      style={{
-        WebkitTransform: 'translate3d(0, 0, 0)',
         WebkitBackfaceVisibility: 'hidden',
      }}
      animate={controls}
@@ -87,8 +87,6 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
          <motion.div 
            key={id}
            style={{
-             // 💥 恢复 3D 硬件加速，解决切牌时的“慢动作”掉帧问题
-             WebkitTransform: 'translate3d(0, 0, 0)',
              WebkitBackfaceVisibility: 'hidden',
            }}
            animate={{
@@ -100,21 +98,19 @@ const ProjectDeck = ({ deck }: { deck: number[] }) => (
              opacity: position === 2 ? 0.8 : 1
            }}
            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-           // 💥 移动端降级 2：取消巨型阴影，改用普通 shadow-2xl
-           className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-2xl sm:shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between overflow-hidden border border-white/20`}
+           // 💥 终极修复 3：将移动端卡片的巨型 shadow-2xl 彻底降级为 shadow-md！平移旋转小阴影不费吹灰之力，“慢动作”立刻消失！
+           className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-md sm:shadow-[0_0_50px_-15px_rgba(0,0,0,0.5)] p-8 flex flex-col justify-between overflow-hidden border border-white/20`}
          >
             <div className="flex justify-between items-start pl-6 relative z-10">
-               {/* 💥 移动端降级 3：彻底干掉小标签的 blur，使用不透明白色 bg-white/90，防止文字消失！桌面端保留 sm:backdrop-blur-md */}
                <div className="bg-white/90 sm:bg-white/50 backdrop-blur-none sm:backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-sm">
                   Project {id + 1}
                </div>
-               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-xl">
+               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md">
                   <Heart size={20} className="text-black fill-black" />
                </div>
             </div>
             
             <div className="mt-auto relative z-10">
-               {/* 💥 移动端降级 4：彻底干掉内容区的 blur，使用 bg-white/70 伪装玻璃，桌面端保留 sm:backdrop-blur-lg */}
                <div className="p-6 rounded-[32px] border border-white/50 shadow-sm relative overflow-hidden bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg">
                  <h2 className={`text-3xl font-black ${TEXT_COLORS[id]} leading-tight mb-2 tracking-tight`}>
                     {projects[id]?.title || "Upcoming Project"}
