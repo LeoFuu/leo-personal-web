@@ -4,6 +4,7 @@ import { motion, useAnimationControls } from 'framer-motion';
 import { MetalClipBack, MetalClipFront } from './MetalClip';
 import { IDCard } from './IDCard';
 import { ProjectDeck } from './ProjectDeck';
+import { ProjectModal } from './ProjectModal'; // 💥 引入弹窗
 
 export interface HomeProps {
   showSpiritHere: boolean;
@@ -15,12 +16,16 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
   const [deck, setDeck] = useState([0, 1, 2]); 
   const [isAnimating, setIsAnimating] = useState(false);
   const [bumpCount, setBumpCount] = useState(0);
+  
+  // 💥 新增：管理详情页状态
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   const clipControls = useAnimationControls();
   const idCardControls = useAnimationControls(); 
 
   const handleNextCard = async () => {
-    if (isAnimating) return;
+    // 如果弹窗开着，不允许切牌
+    if (isAnimating || selectedProjectId !== null) return;
     setIsAnimating(true);
 
     clipControls.start({ rotate: -25, x: -5, y: -5, transition: { duration: 0.08, ease: 'easeOut' } });
@@ -39,24 +44,32 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      className="relative w-full max-w-[360px] mx-auto pt-36 pb-4 px-2"
-    >
-      <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
-        <MetalClipBack />
-        {/* 💥 幽灵容器删除了，一切交还给 IDCard 内部控制 */}
-        <IDCard 
-          controls={idCardControls} 
-          showSpiritHere={showSpiritHere} 
-          isPreparing={isPreparing} 
-          jumpType={jumpType} 
-          bumpCount={bumpCount} 
-        />
-        <MetalClipFront controls={clipControls} />
-        <ProjectDeck deck={deck} />
-      </div>
-    </motion.div>
+    <>
+      {/* 💥 把 Modal 放在最外层，保证它能盖住所有东西 */}
+      <ProjectModal 
+        projectId={selectedProjectId} 
+        onClose={() => setSelectedProjectId(null)} 
+      />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="relative w-full max-w-[360px] mx-auto pt-36 pb-4 px-2"
+      >
+        <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
+          <MetalClipBack />
+          <IDCard 
+            controls={idCardControls} 
+            showSpiritHere={showSpiritHere} 
+            isPreparing={isPreparing} 
+            jumpType={jumpType} 
+            bumpCount={bumpCount} 
+          />
+          <MetalClipFront controls={clipControls} />
+          {/* 💥 把打开详情的方法传给卡片 */}
+          <ProjectDeck deck={deck} onOpenDetail={setSelectedProjectId} />
+        </div>
+      </motion.div>
+    </>
   );
 };
