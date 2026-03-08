@@ -17,20 +17,21 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
          <motion.div 
            key={id}
            style={{ 
-             willChange: 'transform',
+             // 💥 终极保命魔法：强制 GPU 把这个卡片及里面的所有东西合并成“一张平面的贴图”，绝不允许文字飞出圆角！
+             WebkitTransform: 'translate3d(0,0,0)',
+             transform: 'translate3d(0,0,0)',
              WebkitBackfaceVisibility: 'hidden',
              backfaceVisibility: 'hidden',
-             // 💥 神级修复 1：开启层叠隔离！防止毛玻璃引起的 iOS 渲染雪崩！
-             isolation: 'isolate', 
+             willChange: 'transform',
            }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
              y: position === 0 ? 0 : position === 1 ? 16 : 32,
              scale: position === 0 ? 1 : position === 1 ? 0.95 : 0.9,
-             z: position === 0 ? 10 : position === 1 ? 0 : -10,
+             
+             // 💥 删除了夺命的 Z 轴 (z: 10)! 纯粹依赖 zIndex 进行 2D 层叠，这是 iOS 最不容易出错的模式。
              zIndex: 30 - position * 10,
-             // 💥 神级修复 2：彻底删掉 opacity 变化！在 iOS 上，带毛玻璃的容器做 opacity 动画必丢背景！
            }}
            transition={{ type: 'spring', stiffness: 400, damping: 25, mass: 0.8 }}
            className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] p-6 flex flex-col border border-white/20 overflow-hidden`}
@@ -58,8 +59,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                   <img 
                     src={project.cover} 
                     alt="Project Cover" 
-                    // 💥 神级修复 3：删掉 loading="lazy"，这几张图极重要，直接加载，彻底告别滑动白块！
-                    decoding="async" 
+                    // 这里去掉了 async 和 lazy，让关键图片同步加载，杜绝滑动白块
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                   />
                 ) : (
