@@ -94,8 +94,8 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      {/* 💥 修复：背景层加上 contain: paint 和 isolation: isolate，告诉浏览器这层绝对不会超出屏幕，也不要和上面混合，彻底杜绝白块！ */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE]" style={{ contain: 'paint', isolation: 'isolate' }}>
+      {/* 💥 修复白块：绝对不要在 iOS 的 fixed 元素上用 contain: paint！直接用最基础的 div！ */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE]">
          <div className="absolute inset-0 hidden sm:block bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
          <div className="absolute inset-0 bg-transparent sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-[24px]" />
       </div>
