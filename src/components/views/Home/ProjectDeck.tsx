@@ -16,30 +16,33 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
        return (
          <motion.div 
            key={id}
+           // 💥 终极锁死：启用硬件级别的背面隐藏，防止翻转/缩放时的渲染崩溃！
            style={{ 
              WebkitBackfaceVisibility: 'hidden',
-             willChange: 'transform, opacity, z-index',
-             transform: 'translateZ(0)',
+             backfaceVisibility: 'hidden',
+             transformStyle: 'preserve-3d',
+             willChange: 'transform',
            }}
+           // 💥 终极三维空间排位：放弃 zIndex，直接用真实的 Z 轴深度 (z: ...) 来排列卡片！
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
              y: position === 0 ? 0 : position === 1 ? 16 : 32,
-             scale: position === 0 ? 1 : position === 1 ? 0.95 : 0.9,
-             zIndex: 30 - position * 10,
-             opacity: position === 2 ? 0.8 : 1
+             z: position === 0 ? 0 : position === 1 ? -50 : -100, // 用真实的深度取代虚假的 z-index
+             opacity: position === 2 ? 0.8 : 1,
+             // 虽然用了真实的 z 轴，但加上 zIndex 做双重保险，防止 Safari 抽风
+             zIndex: 30 - position * 10
            }}
            transition={{ type: 'spring', stiffness: 500, damping: 25, mass: 0.8 }}
            className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.4)] p-6 flex flex-col border border-white/20 overflow-hidden`}
          >
-            {/* 巨大透明数字底纹 */}
+            {/* ... (这里面所有的卡片内容原封不动) ... */}
             <div className="absolute inset-0 overflow-hidden rounded-[48px] pointer-events-none z-0">
                <div className="absolute -bottom-6 -right-6 text-[180px] text-black/5 font-black tracking-tighter select-none">
                  {id + 1}
                </div>
             </div>
 
-            {/* 顶部标签 */}
             <div className="flex justify-between items-start relative z-20">
                <div className="bg-white/90 sm:bg-white/50 backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-sm">
                  Project {id + 1}
@@ -49,13 +52,11 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                </div>
             </div>
 
-            {/* 封面图展示区 (保持了你喜欢的上移版) */}
             <div className="absolute inset-x-8 top-[64px] bottom-[186px] z-10 rounded-[20px] overflow-hidden bg-black/5 border border-white/30 shadow-inner group">
             {project?.cover ? (
                   <img 
                     src={project.cover} 
                     alt="Project Cover" 
-                    // 💥 性能优化：让图片在后台解码，不卡顿主线程！
                     decoding="async" 
                     loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
@@ -69,7 +70,6 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
             </div>
             
-            {/* 底部信息舱 */}
             <div className="mt-auto relative z-20">
                <div className="p-4 sm:p-5 rounded-[32px] border border-white/50 shadow-lg bg-white/80 sm:bg-white/60 backdrop-blur-xl flex flex-col gap-3">
                  
@@ -96,7 +96,6 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                     {project?.description || "A revolutionary tool that bridges the gap between AI and e-commerce marketing."}
                  </p>
 
-                 {/* 唯一正确的按钮区 */}
                  <div className="flex items-center gap-2 pt-1">
                     <button 
                        onClick={(e) => { e.stopPropagation(); onOpenDetail(id); }}
