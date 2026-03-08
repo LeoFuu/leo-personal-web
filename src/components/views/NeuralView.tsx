@@ -58,7 +58,8 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
       exit={{ opacity: 0, scale: 0.9, y: 50, borderRadius: "80px", transition: { duration: 0.15 } }}
       transition={{ type: "spring", stiffness: 300, damping: 25, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      className="flex flex-col h-[76dvh] max-h-[800px] pt-6 px-4 sm:px-0 w-full max-w-md mx-auto overflow-hidden bg-black touch-pan-y relative z-40 shadow-2xl"
+      // 💥 修复 1：将高度拉长到 84dvh，大幅减少底部白边，视觉更饱满！
+      className="flex flex-col h-[84dvh] max-h-[850px] pt-6 px-4 sm:px-0 w-full max-w-md mx-auto overflow-hidden bg-black touch-pan-y relative z-40 shadow-2xl"
       style={{
         boxShadow: "inset -1px -1px 3px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.6)",
         transformOrigin: "bottom center",
@@ -67,6 +68,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         backfaceVisibility: 'hidden'
       }}
     >
+      {/* 智能隐藏外部组件 */}
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }`}} />
       )}
@@ -113,36 +115,34 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         <div ref={scrollRef} className="h-4" />
       </div>
 
-      {/* 💥 底部输入舱：终极防重叠与极简内嵌设计 */}
+      {/* 💥 底部输入舱：完美居中 + 键盘防重叠联动 */}
       <div className="absolute bottom-6 inset-x-4 sm:inset-x-6 z-50">
         <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none -mx-4 sm:-mx-6" />
         
-        {/* 💥 核心修复 1：通过 pr-[76px] 强行给右侧的“发条悬浮钮”让出一条绝对安全通道！ */}
-        <div className="pr-[76px] sm:pr-[88px]">
-          <div className="p-1 sm:p-1.5 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
+        {/* 💥 修复 2：去掉了 pr-[76px]，因为发条已经隐藏，输入框现在绝对完美居中！ */}
+        <div className="p-1 sm:p-1.5 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
+          
+          <div className="relative flex items-center bg-black/80 rounded-[24px] border border-white/[0.08] overflow-hidden">
+            <input 
+              value={input} 
+              onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
+              onKeyDown={e => e.key === 'Enter' && handleSend()} 
+              // 💥 修复 3：键盘弹出时触发事件隐藏导航栏，收起键盘时恢复导航栏！
+              onFocus={() => window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: false }))}
+              onBlur={() => window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: true }))}
+              placeholder="与数字分身对话..." 
+              className="w-full bg-transparent border-none text-white/90 placeholder:text-white/30 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-5 pr-12" 
+            />
             
-            {/* 💥 核心修复 2：极简内嵌输入框。干掉底色，把小飞机完全嵌进输入框内部！ */}
-            <div className="relative flex items-center bg-black/80 rounded-[24px] border border-white/[0.08] overflow-hidden">
-              <input 
-                value={input} 
-                onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
-                onKeyDown={e => e.key === 'Enter' && handleSend()} 
-                placeholder="与数字分身对话..." 
-                // pr-12：防止你打的字太长，滑到小飞机的下面被挡住
-                className="w-full bg-transparent border-none text-white/90 placeholder:text-white/30 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-4 pr-12" 
-              />
-              
-              <button 
-                onClick={handleSend} 
-                disabled={isThinking || !input.trim()} 
-                // 绝对定位在内部右侧，剥离了底色，直接用颜色高亮反馈交互
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
-              >
-                <Send size={18} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
-              </button>
-            </div>
-
+            <button 
+              onClick={handleSend} 
+              disabled={isThinking || !input.trim()} 
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
+            >
+              <Send size={18} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
+            </button>
           </div>
+
         </div>
       </div>
     </motion.div>

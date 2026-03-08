@@ -6,12 +6,10 @@ import { Home, Book, MessageSquare, Sparkles, ArrowDown, User } from 'lucide-rea
 import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
 
 import { VoidSpirit } from '../components/features/VoidSpirit';
-import dynamic from 'next/dynamic';
-
-const HomeView = dynamic(() => import('../components/views/Home/HomeIndex').then(mod => mod.HomeIndex), { ssr: false });
-const NeuralView = dynamic(() => import('../components/views/NeuralView').then(mod => mod.NeuralView), { ssr: false });
-const NotesView = dynamic(() => import('../components/views/NotesView').then(mod => mod.NotesView), { ssr: false });
-const GuestbookView = dynamic(() => import('../components/views/GuestbookView').then(mod => mod.GuestbookView), { ssr: false });
+import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
+import { NeuralView } from '../components/views/NeuralView';
+import { NotesView } from '../components/views/NotesView';
+import { GuestbookView } from '../components/views/GuestbookView';
 
 const mixedTimeline = [
   { type: "thought", time: "Today, 10:24 AM", text: "灵感总是转瞬即逝，就像这层磨砂玻璃上的水汽。得赶紧把它写进代码里。" },
@@ -106,10 +104,20 @@ export default function Page() {
 
       <div className="fixed bottom-0 inset-x-0 h-40 bg-gradient-to-t from-[#CBD5E1] via-[#CBD5E1]/80 to-transparent pointer-events-none z-40" />
 
+      {/* 💥 发条悬浮钮：在 AI 页面智能隐身！ */}
       <motion.div
         className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        style={{ rotate: springRotate }} 
+        style={{ 
+          rotate: springRotate,
+          // 切到 AI 页时禁用点击
+          pointerEvents: activeTab === 'neural' ? 'none' : 'auto'
+        }} 
+        animate={{
+          // 切到 AI 页时，缩小并变透明
+          opacity: activeTab === 'neural' ? 0 : 1,
+          scale: activeTab === 'neural' ? 0.5 : 1
+        }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
       >
