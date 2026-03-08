@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useIsPresent, useMotionValue, useSpring } from 'framer-motion';
 import { Send, Terminal } from 'lucide-react';
 import { callDeepSeek } from '../../lib/deepseek';
-// 💥 性能优化：彻底移除了极耗性能的 LiquidCard，改用纯 CSS 高性能玻璃拟物！
 
 const MY_AVATAR = "/cartoonf.png"; 
 
@@ -13,11 +12,9 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  // 💥 修复首屏滚动 Bug：用 useRef 拦截首次渲染，防止它一进来就把眼睛顶上去
   const isFirstRender = useRef(true);
   const isPresent = useIsPresent();
 
-  // GPU 级指针追踪，绝不触发 React 重绘
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const springX = useSpring(mouseX, { stiffness: 200, damping: 15 });
@@ -39,12 +36,10 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   };
 
   useEffect(() => { 
-    // 💥 如果是第一次进来，绝对不要往下滚！
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
-    // 只有在发送新消息时，才平滑滚动到底部
     scrollRef.current?.scrollIntoView({ behavior: "smooth" }); 
   }, [messages, isThinking]);
 
@@ -63,14 +58,10 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
       exit={{ opacity: 0, scale: 0.9, y: 50, borderRadius: "80px", transition: { duration: 0.15 } }}
       transition={{ type: "spring", stiffness: 300, damping: 25, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      // 💥 完美布局修复：
-      // 1. 高度改为 76dvh（动态视口高度），键盘弹出时完美自适应，并且整体变短更精致。
-      // 2. max-h-[800px] 防止在平板上拉得太长。
       className="flex flex-col h-[76dvh] max-h-[800px] pt-6 px-4 sm:px-0 w-full max-w-md mx-auto overflow-hidden bg-black touch-pan-y relative z-40 shadow-2xl"
       style={{
         boxShadow: "inset -1px -1px 3px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.6)",
         transformOrigin: "bottom center",
-        // 强制开启独立显卡，滑动绝不掉帧
         willChange: 'transform, opacity',
         transform: 'translateZ(0)',
         backfaceVisibility: 'hidden'
@@ -92,7 +83,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
-      {/* 消息流：拉大底部 padding 给输入框留足空间 */}
       <div className="flex-1 overflow-y-auto space-y-6 pb-36 scrollbar-hide relative z-10 scroll-smooth px-2">
         {messages.map((m, i) => (
           <motion.div 
@@ -123,31 +113,35 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         <div ref={scrollRef} className="h-4" />
       </div>
 
-      {/* 💥 底部输入舱：极致布局重构 */}
-      <div 
-        // pr-12：在右侧强行留出空间，完美避开你的“发条悬浮按钮”！
-        // bottom-6：稍微抬高，防止和底部导航栏挤在一起
-        className="absolute bottom-6 inset-x-4 sm:inset-x-6 z-50 pr-12 sm:pr-0"
-      >
+      {/* 💥 底部输入舱：终极防重叠与极简内嵌设计 */}
+      <div className="absolute bottom-6 inset-x-4 sm:inset-x-6 z-50">
         <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none -mx-4 sm:-mx-6" />
         
-        {/* 抛弃 LiquidCard，使用纯净的高性能 CSS 玻璃质感 */}
-        <div className="p-1.5 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
-          <div className="flex items-center gap-2 bg-black/80 rounded-[24px] p-1.5 pl-4 border border-white/[0.08]">
-            <input 
-              value={input} 
-              onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
-              onKeyDown={e => e.key === 'Enter' && handleSend()} 
-              placeholder="与数字分身对话..." 
-              className="flex-1 bg-transparent border-none text-white/90 placeholder:text-white/30 text-[14px] font-medium outline-none focus:ring-0" 
-            />
-            <button 
-              onClick={handleSend} 
-              disabled={isThinking || !input.trim()} 
-              className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 ${isThinking || !input.trim() ? 'bg-white/5 text-white/20' : 'bg-[#FFD700] text-black shadow-[0_0_15px_rgba(255,215,0,0.4)]'}`}
-            >
-              <Send size={16} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
-            </button>
+        {/* 💥 核心修复 1：通过 pr-[76px] 强行给右侧的“发条悬浮钮”让出一条绝对安全通道！ */}
+        <div className="pr-[76px] sm:pr-[88px]">
+          <div className="p-1 sm:p-1.5 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
+            
+            {/* 💥 核心修复 2：极简内嵌输入框。干掉底色，把小飞机完全嵌进输入框内部！ */}
+            <div className="relative flex items-center bg-black/80 rounded-[24px] border border-white/[0.08] overflow-hidden">
+              <input 
+                value={input} 
+                onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
+                onKeyDown={e => e.key === 'Enter' && handleSend()} 
+                placeholder="与数字分身对话..." 
+                // pr-12：防止你打的字太长，滑到小飞机的下面被挡住
+                className="w-full bg-transparent border-none text-white/90 placeholder:text-white/30 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-4 pr-12" 
+              />
+              
+              <button 
+                onClick={handleSend} 
+                disabled={isThinking || !input.trim()} 
+                // 绝对定位在内部右侧，剥离了底色，直接用颜色高亮反馈交互
+                className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
+              >
+                <Send size={18} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
+              </button>
+            </div>
+
           </div>
         </div>
       </div>
