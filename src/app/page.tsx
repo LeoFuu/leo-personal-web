@@ -6,11 +6,12 @@ import { Home, Book, MessageSquare, Sparkles, ArrowDown, User } from 'lucide-rea
 import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
 
 import { VoidSpirit } from '../components/features/VoidSpirit';
-import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
-import { NeuralView } from '../components/views/NeuralView';
+import dynamic from 'next/dynamic';
 
-import { NotesView } from '../components/views/NotesView';
-import { GuestbookView } from '../components/views/GuestbookView';
+const HomeView = dynamic(() => import('../components/views/Home/HomeIndex').then(mod => mod.HomeIndex), { ssr: false });
+const NeuralView = dynamic(() => import('../components/views/NeuralView').then(mod => mod.NeuralView), { ssr: false });
+const NotesView = dynamic(() => import('../components/views/NotesView').then(mod => mod.NotesView), { ssr: false });
+const GuestbookView = dynamic(() => import('../components/views/GuestbookView').then(mod => mod.GuestbookView), { ssr: false });
 
 const mixedTimeline = [
   { type: "thought", time: "Today, 10:24 AM", text: "灵感总是转瞬即逝，就像这层磨砂玻璃上的水汽。得赶紧把它写进代码里。" },
@@ -127,16 +128,21 @@ export default function Page() {
         {/* 💥 核心修复 1：改回最稳妥的 mode="wait"。只要每个页面的 exit 够快，就不会有任何卡顿，彻底干掉主线程假死！ */}
         <AnimatePresence mode="wait">
           {activeTab === 'home' && (
-            <motion.div 
-            key="home"
-            // 💥 终极解救：干掉所有的 y 和 scale！只保留最干脆的透明度浮现。
-            // 彻底解放浏览器的 Sticky 布局计算，干掉 1 秒卡顿！
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.15 } }}
-            transition={{ duration: 0.25 }}
-            className="w-full flex flex-col items-center"
-         >
+          <motion.div 
+          key="home"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10, transition: { duration: 0.15, ease: "easeOut" } }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="w-full flex flex-col items-center"
+          // 💥 给整个首页容器开启最高级别的 GPU 硬件加速！
+          // 防止进出场时复杂的子元素（卡牌、模糊）压垮主线程
+          style={{ 
+            willChange: 'transform, opacity',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden'
+          }}
+       >
                <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
                <motion.div className="w-full flex justify-center mt-2 mb-4 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
