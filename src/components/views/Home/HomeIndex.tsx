@@ -46,6 +46,7 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
     >
       <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
         <MetalClipBack />
+        {/* 💥 幽灵容器删除了，一切交还给 IDCard 内部控制 */}
         <IDCard 
           controls={idCardControls} 
           showSpiritHere={showSpiritHere} 
