@@ -43,6 +43,28 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" }); 
   }, [messages, isThinking]);
 
+  // 💥 修复 3：神级键盘监听！彻底解决键盘收起但导航栏不出来的 Bug！
+  useEffect(() => {
+    const initialHeight = window.visualViewport?.height || window.innerHeight;
+    
+    const handleResize = () => {
+      const currentHeight = window.visualViewport?.height || window.innerHeight;
+      // 如果高度显著变小，说明键盘弹起了
+      const isKeyboardOpen = currentHeight < initialHeight - 100;
+      
+      // 抛出事件：键盘弹起隐藏导航栏，键盘收起恢复导航栏
+      window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: !isKeyboardOpen }));
+      
+      // 核心杀招：如果键盘收起了，但输入框还占着焦点，强行把它踢掉！
+      if (!isKeyboardOpen) {
+        (document.activeElement as HTMLElement)?.blur();
+      }
+    };
+
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+  }, []);
+
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width - 0.5) * 30;
@@ -53,17 +75,17 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 💥 修复 3：真正的“底部抽屉”入场！y值设为 600（深埋在屏幕下方），冲上来！
-      initial={{ opacity: 0, scale: 0.9, y: 600, borderRadius: "80px" }} 
+      // 💥 修复 2：极度 Q 弹的抽屉入场！从 100vh（屏幕最底端）冲上来！
+      initial={{ opacity: 0, scale: 0.85, y: "100vh", borderRadius: "80px" }} 
       animate={{ opacity: 1, scale: 1, y: 0, borderRadius: "40px" }} 
-      exit={{ opacity: 0, scale: 0.9, y: 600, borderRadius: "80px", transition: { duration: 0.2 } }}
-      // 加大 damping(阻尼) 让长距离弹跳更稳，不至于乱晃
-      transition={{ type: "spring", stiffness: 300, damping: 28, mass: 0.8 }}
+      exit={{ opacity: 0, scale: 0.9, y: "100vh", borderRadius: "80px", transition: { duration: 0.2 } }}
+      // 把 damping 调低到 20，释放它的弹簧天性，现在会有极其舒服的回弹！
+      transition={{ type: "spring", stiffness: 350, damping: 20, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      // 💥 修复 1：高度提升到 87dvh，加上 mt-2 往下沉，完美贴合导航栏上方，消灭多余空白！
-      className="flex flex-col h-[87dvh] max-h-[850px] mt-2 pt-6 px-4 sm:px-0 w-full max-w-md mx-auto overflow-hidden bg-black touch-pan-y relative z-40 shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+      // 💥 修复 1：加上 -mb-8，生生把整个黑框往下拽，完美填补底部的巨大空白！
+      className="flex flex-col h-[83dvh] max-h-[850px] -mb-8 pt-6 px-4 sm:px-0 w-full max-w-md mx-auto overflow-hidden bg-black touch-pan-y relative z-40 shadow-[0_40px_80px_rgba(0,0,0,0.8)]"
       style={{
-        boxShadow: "inset -1px -1px 3px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.6)",
+        boxShadow: "inset -1px -1px 3px rgba(255,255,255,0.1)",
         transformOrigin: "bottom center",
         willChange: 'transform, opacity',
         transform: 'translateZ(0)',
@@ -117,34 +139,31 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
       </div>
 
       {/* 💥 底部输入舱 */}
-      {/* 💥 修复 2：将 inset-x-4 改为 inset-x-8 (手机端缩进更猛)，sm:inset-x-12 (平板缩进更猛)，让它变成精致的悬浮胶囊！ */}
-      <div className="absolute bottom-6 inset-x-8 sm:inset-x-12 z-50">
+      {/* 💥 修复缩短：把 inset-x-8 改成了 inset-x-12 (两边各缩进 48px)，变成了一个极其精致、小巧的居中胶囊！ */}
+      <div className="absolute bottom-6 inset-x-10 sm:inset-x-16 z-50">
         
-        {/* 遮罩层也要跟着缩短，防止黑边溢出 */}
-        <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none -mx-8 sm:-mx-12" />
+        {/* 底部遮罩也要配合缩短 */}
+        <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none -mx-10 sm:-mx-16" />
         
-        <div className="p-1 sm:p-1.5 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
-          
+        <div className="p-1 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
           <div className="relative flex items-center bg-black/80 rounded-[24px] border border-white/[0.08] overflow-hidden">
             <input 
               value={input} 
               onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
               onKeyDown={e => e.key === 'Enter' && handleSend()} 
-              onFocus={() => window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: false }))}
-              onBlur={() => window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: true }))}
+              // 移除了这里不靠谱的 onFocus 和 onBlur，全权交给上面的 VisualViewport 去接管！
               placeholder="与它对话..." 
-              className="w-full bg-transparent border-none text-white/90 placeholder:text-white/30 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-5 pr-12" 
+              className="w-full bg-transparent border-none text-white/90 placeholder:text-white/30 text-[14px] font-medium outline-none focus:ring-0 py-3 pl-4 pr-11" 
             />
             
             <button 
               onClick={handleSend} 
               disabled={isThinking || !input.trim()} 
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
             >
-              <Send size={18} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
+              <Send size={16} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
             </button>
           </div>
-
         </div>
       </div>
     </motion.div>
