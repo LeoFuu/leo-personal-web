@@ -18,21 +18,21 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
            key={id}
            // 💥 终极锁死：启用硬件级别的背面隐藏，防止翻转/缩放时的渲染崩溃！
            style={{ 
-             WebkitBackfaceVisibility: 'hidden',
-             backfaceVisibility: 'hidden',
-             transformStyle: 'preserve-3d',
-             willChange: 'transform',
-           }}
+            // 💥 修复 3：去掉 transform: 'translateZ(0)' 和 will-change，
+            // 因为它们会强迫手机开辟显存层。我们让浏览器自动管理层级
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden',
+          }}
            // 💥 终极三维空间排位：放弃 zIndex，直接用真实的 Z 轴深度 (z: ...) 来排列卡片！
            animate={{
-             rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
-             x: position === 0 ? 0 : position === 1 ? 8 : 20,
-             y: position === 0 ? 0 : position === 1 ? 16 : 32,
-             z: position === 0 ? 0 : position === 1 ? -50 : -100, // 用真实的深度取代虚假的 z-index
-             opacity: position === 2 ? 0.8 : 1,
-             // 虽然用了真实的 z 轴，但加上 zIndex 做双重保险，防止 Safari 抽风
-             zIndex: 30 - position * 10
-           }}
+            rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
+            x: position === 0 ? 0 : position === 1 ? 8 : 20,
+            y: position === 0 ? 0 : position === 1 ? 16 : 32,
+            scale: position === 0 ? 1 : position === 1 ? 0.95 : 0.9,
+            // 💥 修复 4：只用 zIndex，不要混用 z 轴位移
+            zIndex: 30 - position * 10,
+            opacity: position === 2 ? 0.8 : 1
+          }}
            transition={{ type: 'spring', stiffness: 500, damping: 25, mass: 0.8 }}
            className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.4)] p-6 flex flex-col border border-white/20 overflow-hidden`}
          >

@@ -35,7 +35,8 @@ export default function Page() {
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
   useEffect(() => { 
-    setIsLoaded(true); 
+    // 稍微延迟一下 isLoaded，确保 DOM 已经完全挂载再触发入场动画
+    setTimeout(() => setIsLoaded(true), 50);
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
     return () => window.removeEventListener('toggle-navbar', handleToggle);
@@ -81,7 +82,6 @@ export default function Page() {
   ];
 
   return (
-    // 💥 修复：去掉了会导致 iOS Safari 渲染截断的 WebkitOverflowScrolling: 'touch'
     <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col">
       
       <style dangerouslySetInnerHTML={{__html: `
@@ -94,8 +94,8 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      {/* 💥 修复：去掉了过载的 translate-z-0 和 will-change，回归正常的 DOM 渲染 */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE]">
+      {/* 💥 修复：背景层加上 contain: paint 和 isolation: isolate，告诉浏览器这层绝对不会超出屏幕，也不要和上面混合，彻底杜绝白块！ */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE]" style={{ contain: 'paint', isolation: 'isolate' }}>
          <div className="absolute inset-0 hidden sm:block bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
          <div className="absolute inset-0 bg-transparent sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-[24px]" />
       </div>
@@ -113,10 +113,26 @@ export default function Page() {
         </div>
       </motion.div>
 
-      <main className={`relative z-10 max-w-xl mx-auto w-full px-5 pb-32 pt-10 flex-1 transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0 translate-y-4'}`}>
-        <AnimatePresence mode="wait">
+      {/* 💥 终极性能修复：
+          1. 删除了原先包裹在 main 上的、会导致全页面疯狂重绘的 transition-all 类名！
+          2. 使用 motion.main 来实现纯净、不污染子元素的透明度和位移动画！
+      */}
+      <motion.main 
+        initial={{ opacity: 0, y: 15 }}
+        animate={isLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative z-10 max-w-xl mx-auto w-full px-5 pb-32 pt-10 flex-1"
+      >
+        {/* 💥 修复：把 mode="wait" 去掉。手机端让组件自由挂载，防止路由切换时的卡死截断 */}
+        <AnimatePresence>
           {activeTab === 'home' && (
-            <motion.div key="home">
+            <motion.div 
+               key="home"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               transition={{ duration: 0.2 }}
+            >
                <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
                <motion.div className="w-full flex justify-center mt-2 mb-10 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
@@ -137,7 +153,6 @@ export default function Page() {
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
-                             {/* 💥 修复：去掉了时间轴卡片的 will-change-transform，释放 GPU 内存 */}
                              <motion.div
                                className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
                                style={{ rotate: isLeft ? '-1.5deg' : '1.5deg' }}
@@ -199,7 +214,7 @@ export default function Page() {
           {activeTab === 'notes' && <NotesView key="notes" />}
           {activeTab === 'guestbook' && <GuestbookView key="guestbook" />}
         </AnimatePresence>
-      </main>
+      </motion.main>
 
       <motion.div 
         className="fixed bottom-10 inset-x-0 flex justify-center z-50"

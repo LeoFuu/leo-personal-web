@@ -43,33 +43,18 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
 
   return (
     <>
-      <ProjectModal 
-        projectId={selectedProjectId} 
-        onClose={() => setSelectedProjectId(null)} 
-      />
+      <ProjectModal projectId={selectedProjectId} onClose={() => setSelectedProjectId(null)} />
 
-      {/* 💥 3D 修复第一步：建立全局 3D 视界 (perspective: 1500px) */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }} 
         animate={{ opacity: 1, y: 0 }} 
-        // 加入 perspective，这就像在这堆卡片正前方 1500px 的地方架了一台摄像机
+        // 💥 修复 1：去掉 perspective。在移动端，直接用 2D 排位反而更清爽、更不容易出错
         className="relative w-full max-w-[360px] mx-auto pt-36 pb-4 px-2"
-        style={{ perspective: '1500px' }} 
       >
-        {/* 💥 3D 修复第二步：强制子元素保持 3D 空间结构 (preserve-3d) */}
-        <div 
-          className="relative w-full h-[360px] cursor-pointer group" 
-          onClick={handleNextCard}
-          style={{ transformStyle: 'preserve-3d' }} 
-        >
+        {/* 💥 修复 2：去掉 transformStyle: 'preserve-3d' */}
+        <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
           <MetalClipBack />
-          <IDCard 
-            controls={idCardControls} 
-            showSpiritHere={showSpiritHere} 
-            isPreparing={isPreparing} 
-            jumpType={jumpType} 
-            bumpCount={bumpCount} 
-          />
+          <IDCard controls={idCardControls} showSpiritHere={showSpiritHere} isPreparing={isPreparing} jumpType={jumpType} bumpCount={bumpCount} />
           <MetalClipFront controls={clipControls} />
           <ProjectDeck deck={deck} onOpenDetail={setSelectedProjectId} />
         </div>
