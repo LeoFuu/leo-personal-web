@@ -57,26 +57,22 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ projectId, onClose }
     <AnimatePresence>
       {projectId !== null && project && (
         <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center pointer-events-auto">
-          {/* 全屏毛玻璃遮罩 */}
-          {/* 💥 弹窗性能终极优化：绝不动摇 backdropFilter，只让 GPU 处理最擅长的 Opacity！ */}
-          <motion.div
+            {/* 💥 弹窗遮罩：手机端用纯黑半透明，PC端才敢用毛玻璃！ */}
+            <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            // 直接把 backdrop-blur 属性写死在 class 里！
-            className="absolute inset-0 bg-black/40 backdrop-blur-[8px] will-change-opacity translate-z-0"
+            transition={{ duration: 0.25 }}
+            className="absolute inset-0 bg-black/60 sm:bg-black/40 backdrop-blur-none sm:backdrop-blur-[8px] will-change-opacity translate-z-0"
             onClick={onClose}
           />
 
-            {/* 详情视窗本体 */}
-            <motion.div
-            initial={{ y: '100%', scale: 0.9, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: '100%', scale: 0.9, opacity: 0 }}
-            // 💥 性能优化：降低一点 stiffness，让手机引擎喘口气
-            transition={{ type: 'spring', damping: 25, stiffness: 260 }}
-            // 💥 性能优化：强行推入 GPU 复合层 (will-change-transform translate-z-0 backface-hidden)
+            {/* 💥 详情视窗本体：废弃重度算力的 spring，改用极速顺滑的 tween + circOut 物理曲线！ */}
+          <motion.div
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={{ type: 'tween', ease: 'circOut', duration: 0.35 }}
             className="relative w-full max-w-[500px] h-[85vh] sm:h-[650px] bg-[#F8F9FA] sm:rounded-[40px] rounded-t-[40px] overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/50 z-10 will-change-transform translate-z-0 backface-hidden"
             onClick={(e) => e.stopPropagation()} 
           >

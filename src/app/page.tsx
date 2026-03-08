@@ -103,11 +103,11 @@ export default function Page() {
       `}} />
 
       {/* 💥 性能终极释放区：背景层硬件隔离！ */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[#FDFEFE] translate-z-0">
-         {/* 💥 优化1：只在PC端(sm)播放动画，手机端直接静态图保命。强制 will-change-transform */}
-         <div className="absolute inset-0 bg-[url('/bg.jpg')] bg-cover bg-center sm:animate-ken-burns translate-z-0 will-change-transform" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
-         {/* 💥 优化2：模糊度降到24px（人眼根本看不出区别），加上 backface-hidden 切断重绘 */}
-         <div className="absolute inset-0 bg-white/40 backdrop-blur-[24px] translate-z-0 backface-hidden" />
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE] translate-z-0">
+         {/* 手机端直接用纯净背景色，PC端保留动画图 */}
+         <div className="absolute inset-0 hidden sm:block bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns translate-z-0 will-change-transform" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
+         {/* 💥 致命修改：手机端直接 bg-transparent 不做任何模糊！PC端才用 sm:backdrop-blur */}
+         <div className="absolute inset-0 bg-transparent sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-[24px] translate-z-0 backface-hidden" />
       </div>
 
       <motion.div
@@ -211,13 +211,11 @@ export default function Page() {
       </main>
 
       {/* 💥 终极导航栏：包裹 motion.div 响应隐身指令 */}
+      {/* 💥 终极导航栏修复：使用 inset-x-0 和 flex justify-center 居中，彻底消灭 layoutId 错位 BUG！ */}
       <motion.div 
-        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 will-change-transform translate-z-0"
+        className="fixed bottom-10 inset-x-0 flex justify-center z-50 will-change-transform translate-z-0"
         initial={{ y: 0, opacity: 1 }}
-        animate={{ 
-          y: isNavVisible ? 0 : 150, 
-          opacity: isNavVisible ? 1 : 0 
-        }}
+        animate={{ y: isNavVisible ? 0 : 150, opacity: isNavVisible ? 1 : 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 25 }}
       >
         <nav className="relative flex items-center p-1.5 rounded-full">
@@ -227,7 +225,7 @@ export default function Page() {
              style={{
                background: "rgba(255, 255, 255, 0.25)",
                // 💥 稍微降低毛玻璃税
-               backdropFilter: "blur(24px) saturate(200%) contrast(110%)",
+               backdropFilter: "blur(12px) saturate(200%) contrast(110%)",
                boxShadow: "0 30px 60px -12px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 3px rgba(0,0,0,0.05)"
              }}
           >
@@ -240,7 +238,7 @@ export default function Page() {
             const showSpirit = spiritTarget === item.id;
             
             return (
-              <button key={item.id} onClick={() => handleNavClick(item.id)} className="relative z-10 flex flex-col items-center justify-center w-20 h-14 rounded-full transition-all cursor-pointer active:scale-95 group">
+              <button key={item.id} onClick={() => handleNavClick(item.id)} className="relative z-10 flex flex-col items-center justify-center w-[68px] sm:w-20 h-14 rounded-full transition-all cursor-pointer active:scale-95 group">
                 
                 {showSpirit && (
                    <VoidSpirit isNavigating={true} isPreparing={isPreparing} jumpType={jumpType} locationId={`nav-${item.id}`} />
