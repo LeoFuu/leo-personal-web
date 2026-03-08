@@ -1,6 +1,7 @@
 // src/components/views/NeuralView.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+// 💥 修复：引入安全的 useIsPresent，绝不使用危险的 usePresence！
+import { motion, useIsPresent, useSpring } from 'framer-motion';
 import { Send, Terminal } from 'lucide-react';
 import { LiquidCard } from '../ui/LiquidCard';
 import { callDeepSeek } from '../../lib/deepseek';
@@ -13,6 +14,9 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 💥 终极排雷：使用 useIsPresent。它只会返回布尔值，绝对不会阻止组件卸载！
+  const isPresent = useIsPresent();
 
   const [eyePos, setEyePos] = useState({ x: 0, y: 0 });
 
@@ -41,23 +45,24 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.1, y: 300, borderRadius: "100px" }} 
+      initial={{ opacity: 0, scale: 0.8, y: 100, borderRadius: "100px" }} 
       animate={{ opacity: 1, scale: 1, y: 0, borderRadius: "40px" }} 
-      exit={{ opacity: 0, scale: 0.8, y: 150, borderRadius: "100px", transition: { duration: 0.15 } }}
+      exit={{ opacity: 0, scale: 0.8, y: 100, borderRadius: "100px", transition: { duration: 0.15 } }}
       transition={{ type: "spring", stiffness: 280, damping: 25, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      // 💥 彻底干掉惹祸的 absolute！老老实实呆在 flex 文档流里
+      // 保持正常的 flex 文档流，绝不用 absolute 破坏排版
       className="flex flex-col h-[85vh] sm:h-[80vh] pt-6 px-4 sm:px-0 w-full max-w-md mx-auto overflow-hidden bg-black touch-pan-y relative z-40"
       style={{
         boxShadow: "inset -2px -2px 10px rgba(255,255,255,0.08), 0 20px 40px rgba(0,0,0,0.8)",
         transformOrigin: "bottom center" 
       }}
     >
-      {/* 💥 神级天然隐身：只要 NeuralView 没被彻底卸载，这段 Style 就会生效隐藏底部精灵。
-          一旦退出动画结束，组件被连根拔起，这段 Style 瞬间消失，底部精灵天然显形！ */}
-      <style dangerouslySetInnerHTML={{__html: `
-        nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }
-      `}} />
+      {/* 隐身控制：一旦组件开始退场，isPresent 变假，底部导航栏小精灵瞬间现身！ */}
+      {isPresent && (
+        <style dangerouslySetInnerHTML={{__html: `
+          nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }
+        `}} />
+      )}
 
       {/* 大眼睛 */}
       <div className="flex justify-center items-center gap-6 mb-8 shrink-0 relative z-20 pointer-events-none mt-2">
@@ -136,7 +141,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
                 if (Math.random() > 0.5) setEyePos({ x: (Math.random() - 0.5) * 10, y: (Math.random() - 0.5) * 10 });
               }} 
               onKeyDown={e => e.key === 'Enter' && handleSend()} 
-              placeholder="与它对话..." 
+              placeholder="与数字分身对话..." 
               className="flex-1 bg-transparent border-none text-white/90 placeholder:text-white/30 text-[14px] font-medium outline-none focus:ring-0" 
             />
             <button 

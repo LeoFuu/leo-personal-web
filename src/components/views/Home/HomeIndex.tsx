@@ -35,8 +35,8 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
 
     setBumpCount(prev => prev + 1);
 
-    clipControls.start({ rotate: -4, x: 0, y: 0, transition: { type: 'spring', stiffness: 600, damping: 20 } });
-    idCardControls.start({ rotate: -6, y: 0, transition: { type: 'spring', stiffness: 600, damping: 15 } });
+    clipControls.start({ rotate: -4, x: 0, y: 0, transition: { type: "spring", stiffness: 600, damping: 20 } });
+    idCardControls.start({ rotate: -6, y: 0, transition: { type: "spring", stiffness: 600, damping: 15 } });
 
     setTimeout(() => setIsAnimating(false), 100);
   };
@@ -45,13 +45,13 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
     <>
       <ProjectModal projectId={selectedProjectId} onClose={() => setSelectedProjectId(null)} />
 
+      {/* 💥 神级物理入场：由于它内部没有 Sticky 元素，在这里加弹簧绝对不会卡顿！ */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        // 💥 修复 1：去掉 perspective。在移动端，直接用 2D 排位反而更清爽、更不容易出错
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 350, damping: 25 }}
         className="relative w-full max-w-[360px] mx-auto pt-36 pb-4 px-2"
       >
-        {/* 💥 修复 2：去掉 transformStyle: 'preserve-3d' */}
         <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
           <MetalClipBack />
           <IDCard controls={idCardControls} showSpiritHere={showSpiritHere} isPreparing={isPreparing} jumpType={jumpType} bumpCount={bumpCount} />

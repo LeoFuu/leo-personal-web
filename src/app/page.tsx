@@ -35,7 +35,6 @@ export default function Page() {
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
   useEffect(() => { 
-    // 稍微延迟一下 isLoaded，确保 DOM 已经完全挂载再触发入场动画
     setTimeout(() => setIsLoaded(true), 50);
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
@@ -46,7 +45,8 @@ export default function Page() {
     if (tabId === activeTab || pendingTab === tabId) return;
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
     
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 强制自动置顶，不给渲染引擎留拖泥带水的机会
+    window.scrollTo({ top: 0, behavior: 'auto' });
 
     const isStartingFromPage = spiritTarget === null;
     setIsPreparing(true);
@@ -94,33 +94,15 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      {/* ✨ 修正版方案一：Mac Studio 银 (拉丝金属与强对比光影) */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#E2E8F0]"> 
-        
-        {/* 1. 微观金属噪点 */}
         <div 
           className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-          }}
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
         />
-        
-        {/* 2. 强力洗墙顶灯 */}
-        <div 
-          className="absolute top-0 inset-x-0 h-[80vh]"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0.4) 40%, transparent 100%)'
-          }}
-        />
-        
-        {/* 3. 底部边缘暗角 */}
+        <div className="absolute top-0 inset-x-0 h-[80vh]" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0.4) 40%, transparent 100%)' }} />
         <div className="absolute bottom-0 inset-x-0 h-[20vh] bg-gradient-to-t from-[#CBD5E1]/80 to-transparent" />
       </div>
 
-      {/* 💥 神级 UX 修复：底部羽化遮罩！
-          这个渐变层会在 `z-40`（刚好压在滚动内容上面，但在导航栏 z-50 下面）。
-          当你的卡片滚到底部时，会像“沉入雾中”一样慢慢消失，极其高级！
-      */}
       <div className="fixed bottom-0 inset-x-0 h-40 bg-gradient-to-t from-[#CBD5E1] via-[#CBD5E1]/80 to-transparent pointer-events-none z-40" />
 
       <motion.div
@@ -142,18 +124,21 @@ export default function Page() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10 max-w-xl mx-auto w-full px-5 pb-32 pt-10 flex-1"
       >
-        <AnimatePresence mode="popLayout">
+        {/* 💥 核心修复 1：改回最稳妥的 mode="wait"。只要每个页面的 exit 够快，就不会有任何卡顿，彻底干掉主线程假死！ */}
+        <AnimatePresence mode="wait">
           {activeTab === 'home' && (
             <motion.div 
-               key="home"
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               transition={{ duration: 0.2 }}
-            >
+            key="home"
+            // 💥 终极解救：干掉所有的 y 和 scale！只保留最干脆的透明度浮现。
+            // 彻底解放浏览器的 Sticky 布局计算，干掉 1 秒卡顿！
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+            transition={{ duration: 0.25 }}
+            className="w-full flex flex-col items-center"
+         >
                <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
-               {/* 💥 修复：把 mb-10 改成 mb-4，让随手贴稍微往上提一点，刚好露出一个头部！ */}
                <motion.div className="w-full flex justify-center mt-2 mb-4 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
                  <div className="flex flex-col items-center gap-1.5">
                    <ArrowDown size={14} className="text-slate-500" />
@@ -172,7 +157,9 @@ export default function Page() {
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
-                         <motion.div
+                           {/* 💥 核心修复 2：把底下长长的时间轴全部改回 whileInView！
+                               不让它们在切回首页的瞬间堆积渲染，彻底释放浏览器算力！ */}
+                           <motion.div
                                className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
                                style={{ rotate: isLeft ? '-1.5deg' : '1.5deg', isolation: 'isolate' }}
                                initial={{ opacity: 0, y: 30 }}
@@ -212,8 +199,10 @@ export default function Page() {
                     <motion.div 
                       className="group bg-white/60 sm:bg-white/40 sm:backdrop-blur-xl border border-white/60 rounded-[32px] p-6 flex items-center gap-5 cursor-pointer shadow-lg transition-all active:scale-[0.98]"
                       onClick={() => handleNavClick('guestbook')}
-                      whileInView={{ scale: [0.9, 1], opacity: [0, 1] }}
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      whileInView={{ scale: 1, opacity: 1 }}
                       viewport={{ once: true }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <div className="w-14 h-14 bg-slate-900 rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
                         <MessageSquare size={24} className="text-white/90" />
