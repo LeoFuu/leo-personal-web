@@ -49,7 +49,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                </div>
             </div>
 
-            {/* 封面图展示区 */}
+            {/* 封面图展示区 (保持了你喜欢的上移版) */}
             <div className="absolute inset-x-8 top-[64px] bottom-[186px] z-10 rounded-[20px] overflow-hidden bg-black/5 border border-white/30 shadow-inner group">
                 {project?.cover ? (
                   <img 
@@ -93,7 +93,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                     {project?.description || "A revolutionary tool that bridges the gap between AI and e-commerce marketing."}
                  </p>
 
-                 {/* 💥 唯一正确的按钮区：带有 onClick 事件并且在白色面板内部 */}
+                 {/* 唯一正确的按钮区 */}
                  <div className="flex items-center gap-2 pt-1">
                     <button 
                        onClick={(e) => { e.stopPropagation(); onOpenDetail(id); }}
