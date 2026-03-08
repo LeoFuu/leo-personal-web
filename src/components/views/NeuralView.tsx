@@ -10,8 +10,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [messages, setMessages] = useState([{ role: 'ai', text: "你好，Leo。我是 VoidSpirit，你的数字分身。接入 DeepSeek 网络成功。" }]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  
-  // 💥 增加一个键盘状态，让输入框聪明地“上下躲避”
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false); 
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -56,14 +54,12 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
       const diff = currentHeight - lastHeight;
       
       if (diff > 100) {
-        // 键盘收起
         setIsKeyboardOpen(false);
         window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: true }));
         if (document.activeElement && document.activeElement.tagName === 'INPUT') {
           (document.activeElement as HTMLElement).blur();
         }
       } else if (diff < -100) {
-        // 键盘弹起
         setIsKeyboardOpen(true);
         window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: false }));
       }
@@ -85,16 +81,14 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 💥 修复 2：采用原生 iOS 抽屉动画：从 100% (自身高度的底部) 冲上来！绝对 Q 弹！
       initial={{ opacity: 0, y: "100%" }} 
       animate={{ opacity: 1, y: 0 }} 
       exit={{ opacity: 0, y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 25, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      
-      // 💥 修复 1：核心降维打击！把 relative 换成 fixed bottom-0！
-      // 它现在彻底无视外层的 pb-32，死死地咬住屏幕最底端，白边从此消失！
-      className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md h-[88dvh] bg-black rounded-t-[40px] flex flex-col z-40 shadow-[0_-20px_60px_rgba(0,0,0,0.4)]"
+      // 💥 修复 2（白雾Bug）：把 z-40 改成 z-[45]！
+      // 完美压制外层 page.tsx 的白色渐变遮罩，同时不影响 z-50 的导航栏！
+      className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md h-[88dvh] bg-black rounded-t-[40px] flex flex-col z-[45] shadow-[0_-20px_60px_rgba(0,0,0,0.5)]"
       style={{
         willChange: 'transform, opacity',
         transform: 'translateZ(0)',
@@ -106,8 +100,8 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         <style dangerouslySetInnerHTML={{__html: `nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }`}} />
       )}
 
-      {/* 大眼睛 (加点 mt-8 让它往下一点，远离手机顶部的刘海) */}
-      <div className="flex justify-center items-center gap-6 mb-4 mt-8 shrink-0 relative z-20 pointer-events-none">
+      {/* 💥 修复 1（眼睛固定）：将其改为 shrink-0 并设定固定内边距，它现在会死死钉在顶部，绝不乱跑！ */}
+      <div className="shrink-0 flex justify-center items-center gap-6 pt-10 pb-4 relative z-20 pointer-events-none border-b border-white/5">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.4)] translate-z-0">
             <motion.div 
@@ -118,8 +112,9 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
-      {/* 💥 修复 4：加长 pb-[160px]，给长篇大论留下足够的滚动空间，绝不被输入框挡住！ */}
-      <div className="flex-1 overflow-y-auto space-y-6 pb-[160px] scrollbar-hide relative z-10 scroll-smooth px-4 sm:px-6">
+      {/* 💥 修复 3（无法滚动 Bug）：加入 min-h-0！这是 Flexbox 里开启独立滚动的钥匙！ */}
+      {/* 给底部留出高达 180px 的空白 (pb-[180px])，确保最后一行字绝对不会被输入框挡住 */}
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-6 px-4 sm:px-6 pt-4 pb-[180px] scrollbar-hide relative z-10 scroll-smooth">
         {messages.map((m, i) => (
           <motion.div 
             initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -149,15 +144,14 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         <div ref={scrollRef} className="h-4" />
       </div>
 
-      {/* 💥 修复 3：神级智能输入框！ */}
-      {/* 当键盘关闭时，它停在 108px 的高度，完美悬浮在白色导航栏上方！ */}
-      {/* 当键盘打开时，导航栏消失，它自动下沉到 24px 的高度，完美贴合键盘！ */}
+      {/* 智能输入框 */}
       <motion.div 
         animate={{ bottom: isKeyboardOpen ? 24 : 108 }}
         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-        className="absolute inset-x-6 sm:inset-x-10 z-50"
+        className="absolute left-0 right-0 px-6 sm:px-10 z-50"
       >
-        <div className="absolute -top-12 inset-x-0 h-12 bg-gradient-to-t from-black to-transparent pointer-events-none -mx-6 sm:-mx-10" />
+        {/* 输入框上方的渐变遮罩，挡住文字底部滚动的硬切边 */}
+        <div className="absolute -top-16 left-0 right-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
         
         <div className="p-1 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
           <div className="relative flex items-center bg-black/80 rounded-[24px] border border-white/[0.08] overflow-hidden">
