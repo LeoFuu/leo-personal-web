@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Home, Book, MessageSquare, Sparkles, ArrowDown, User } from 'lucide-react';
 import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
 
-import { LiquidFilters } from '../components/ui/LiquidFilters';
+// 💥 删除了 LiquidFilters 引入，彻底拔除 SVG 滤镜毒瘤
 import { VoidSpirit } from '../components/features/VoidSpirit';
 import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
 import { NeuralView } from '../components/views/NeuralView';
@@ -27,7 +27,6 @@ export default function Page() {
   const [jumpType, setJumpType] = useState<'hop' | 'dive' | 'soar'>('hop'); 
   const [isLoaded, setIsLoaded] = useState(false);
   
-  // 💥 新增：监听导航栏的显示状态 (配合弹窗的隔空喊话)
   const [isNavVisible, setIsNavVisible] = useState(true);
 
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, spirit: null, pageExit: null });
@@ -38,7 +37,6 @@ export default function Page() {
 
   useEffect(() => { 
     setIsLoaded(true); 
-    // 💥 挂载导航栏监听器
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
     return () => window.removeEventListener('toggle-navbar', handleToggle);
@@ -84,16 +82,11 @@ export default function Page() {
   ];
 
   return (
-    // 💥 性能优化：加入 WebkitOverflowScrolling 开启 iOS 原生丝滑滚动
     <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <LiquidFilters />
       
+      {/* 💥 彻底干掉危险的 CSS：去除了 frost-noise 和无用的 keyframes */}
       <style dangerouslySetInnerHTML={{__html: `
         html, body { overscroll-behavior: none; background-color: #FDFEFE; }
-        .frost-noise {
-           background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-           opacity: 0.04;
-        }
         @keyframes ken-burns {
           0% { transform: scale(1.0) translate(0, 0); }
           50% { transform: scale(1.1) translate(-1%, -1%); }
@@ -102,11 +95,9 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      {/* 💥 性能终极释放区：背景层硬件隔离！ */}
+      {/* 💥 安全实现背景图不动的方案！ */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE] translate-z-0">
-         {/* 手机端直接用纯净背景色，PC端保留动画图 */}
          <div className="absolute inset-0 hidden sm:block bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns translate-z-0 will-change-transform" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
-         {/* 💥 致命修改：手机端直接 bg-transparent 不做任何模糊！PC端才用 sm:backdrop-blur */}
          <div className="absolute inset-0 bg-transparent sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-[24px] translate-z-0 backface-hidden" />
       </div>
 
@@ -210,8 +201,6 @@ export default function Page() {
         </AnimatePresence>
       </main>
 
-      {/* 💥 终极导航栏：包裹 motion.div 响应隐身指令 */}
-      {/* 💥 终极导航栏修复：使用 inset-x-0 和 flex justify-center 居中，彻底消灭 layoutId 错位 BUG！ */}
       <motion.div 
         className="fixed bottom-10 inset-x-0 flex justify-center z-50 will-change-transform translate-z-0"
         initial={{ y: 0, opacity: 1 }}
@@ -224,13 +213,10 @@ export default function Page() {
              className="absolute inset-0 z-0 rounded-full overflow-hidden border border-white/40 pointer-events-none"
              style={{
                background: "rgba(255, 255, 255, 0.25)",
-               // 💥 稍微降低毛玻璃税
                backdropFilter: "blur(12px) saturate(200%) contrast(110%)",
                boxShadow: "0 30px 60px -12px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 3px rgba(0,0,0,0.05)"
              }}
-          >
-             <div className="absolute inset-0 frost-noise pointer-events-none" />
-          </div>
+          />
 
           {navItems.map((item) => {
             const isActive = activeTab === item.id;

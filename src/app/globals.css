@@ -6,19 +6,15 @@
 /* 新增：定义深邃星空背景 */
 @layer base {
   body {
-    /* 💥 关键修改：从黑底改为哑光板岩灰，并引入细腻的无缝磨砂纹理 */
     @apply antialiased text-gray-200;
     
-    /* 1. 哑光灰色底色，接近深色混凝土 */
     background-color: #0C0C0E;
-    
-    /* 2. 高质量、无缝、超细腻的噪点磨砂纹理 (我为你提供一张免费的图床链接) */
     background-image: url('https://w.wallhaven.cc/full/xl/wallhaven-xly66m.png');
     background-repeat: repeat;
-    background-size: 300px; /* 控制磨砂颗粒的大小 */
-    background-attachment: fixed;
+    background-size: 300px;
     
-    /* 3. 给背景加上一层极淡的、有体积感的渐变光，增加深度 */
+    /* 💥 致命修复：删除了 background-attachment: fixed; */
+    
     background-blend-mode: overlay;
     background-image: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 50%, rgba(0,0,0,0.2) 100%), url('https://w.wallhaven.cc/full/xl/wallhaven-xly66m.png');
   }
