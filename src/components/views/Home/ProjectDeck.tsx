@@ -51,10 +51,13 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
 
             {/* 封面图展示区 (保持了你喜欢的上移版) */}
             <div className="absolute inset-x-8 top-[64px] bottom-[186px] z-10 rounded-[20px] overflow-hidden bg-black/5 border border-white/30 shadow-inner group">
-                {project?.cover ? (
+            {project?.cover ? (
                   <img 
                     src={project.cover} 
                     alt="Project Cover" 
+                    // 💥 性能优化：让图片在后台解码，不卡顿主线程！
+                    decoding="async" 
+                    loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                   />
                 ) : (

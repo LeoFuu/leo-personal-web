@@ -47,7 +47,7 @@ export const NavBar: React.FC<NavBarProps> = ({ navItems, activeTab, spiritTarge
              className="absolute inset-0 z-0 rounded-full overflow-hidden border border-white/40 pointer-events-none"
              style={{
                background: "rgba(255, 255, 255, 0.25)",
-               backdropFilter: "blur(40px) saturate(200%) contrast(110%)",
+               backdropFilter: "blur(12px) saturate(200%) contrast(110%)",
                boxShadow: `
                  0 30px 60px -12px rgba(0,0,0,0.15),
                  inset 0 1px 1px rgba(255,255,255,0.9),

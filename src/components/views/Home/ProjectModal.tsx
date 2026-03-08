@@ -60,20 +60,22 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ projectId, onClose }
           {/* 全屏毛玻璃遮罩 */}
           <motion.div
             initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            animate={{ opacity: 1, backdropFilter: 'blur(20px)' }}
+            animate={{ opacity: 1, backdropFilter: 'blur(8px)' }}
             exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            transition={{ duration: 0.4 }}
-            className="absolute inset-0 bg-black/40"
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 bg-black/40 will-change-[opacity,backdrop-filter] translate-z-0"
             onClick={onClose}
           />
 
-          {/* 详情视窗本体 */}
-          <motion.div
+            {/* 详情视窗本体 */}
+            <motion.div
             initial={{ y: '100%', scale: 0.9, opacity: 0 }}
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: '100%', scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-[500px] h-[85vh] sm:h-[650px] bg-[#F8F9FA] sm:rounded-[40px] rounded-t-[40px] overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/50 z-10"
+            // 💥 性能优化：降低一点 stiffness，让手机引擎喘口气
+            transition={{ type: 'spring', damping: 25, stiffness: 260 }}
+            // 💥 性能优化：强行推入 GPU 复合层 (will-change-transform translate-z-0 backface-hidden)
+            className="relative w-full max-w-[500px] h-[85vh] sm:h-[650px] bg-[#F8F9FA] sm:rounded-[40px] rounded-t-[40px] overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/50 z-10 will-change-transform translate-z-0 backface-hidden"
             onClick={(e) => e.stopPropagation()} 
           >
             {/* 关闭按钮 */}
@@ -88,10 +90,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ projectId, onClose }
             <div className="relative w-full h-[40%] bg-black/5 shrink-0">
               {project.cover && (
                 <img 
-                  src={project.cover} 
-                  alt={project.title} 
-                  className="w-full h-full object-cover object-top"
-                />
+                src={project.cover} 
+                alt="Project Cover" 
+                // 💥 性能优化：让图片在后台解码，不卡顿主线程！
+                decoding="async" 
+                loading="lazy"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+              />
               )}
               <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#F8F9FA] to-transparent" />
             </div>
