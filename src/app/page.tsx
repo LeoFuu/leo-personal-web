@@ -153,9 +153,10 @@ export default function Page() {
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
-                             <motion.div
+                         <motion.div
                                className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
-                               style={{ rotate: isLeft ? '-1.5deg' : '1.5deg' }}
+                               // 💥 加上 isolation: 'isolate'，保护时间轴卡片不被 Safari 撕裂！
+                               style={{ rotate: isLeft ? '-1.5deg' : '1.5deg', isolation: 'isolate' }}
                                initial={{ opacity: 0, y: 30 }}
                                whileInView={{ opacity: 1, y: 0 }}
                                viewport={{ margin: "50px", once: true }} 

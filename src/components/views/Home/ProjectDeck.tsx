@@ -16,30 +16,26 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
        return (
          <motion.div 
            key={id}
-           // 💥 修复卡顿：必须加回 willChange，否则 CPU 绘制阴影会卡死！
-           // 保持 transformStyle: 'flat' (默认)，不要去建 3D 空间，防止 Safari 裁剪 Bug。
            style={{ 
              willChange: 'transform',
              WebkitBackfaceVisibility: 'hidden',
              backfaceVisibility: 'hidden',
+             // 💥 神级修复 1：开启层叠隔离！防止毛玻璃引起的 iOS 渲染雪崩！
+             isolation: 'isolate', 
            }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
              x: position === 0 ? 0 : position === 1 ? 8 : 20,
              y: position === 0 ? 0 : position === 1 ? 16 : 32,
              scale: position === 0 ? 1 : position === 1 ? 0.95 : 0.9,
-             
-             // 💥 修复图层穿透：用微小的真实 Z 轴坐标 (10, 0, -10) 强迫 GPU 分层，配上 zIndex 双重锁死！
              z: position === 0 ? 10 : position === 1 ? 0 : -10,
              zIndex: 30 - position * 10,
-             
-             opacity: position === 2 ? 0.8 : 1
+             // 💥 神级修复 2：彻底删掉 opacity 变化！在 iOS 上，带毛玻璃的容器做 opacity 动画必丢背景！
            }}
-           // 💥 稍微调低 stiffness (从 500 降到 400)，给手机引擎一点喘息空间，依然很 Q 弹
            transition={{ type: 'spring', stiffness: 400, damping: 25, mass: 0.8 }}
            className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] p-6 flex flex-col border border-white/20 overflow-hidden`}
          >
-            {/* 巨大透明数字底纹 */}
+            {/* 数字底纹 */}
             <div className="absolute inset-0 overflow-hidden rounded-[48px] pointer-events-none z-0">
                <div className="absolute -bottom-6 -right-6 text-[180px] text-black/5 font-black tracking-tighter select-none">
                  {id + 1}
@@ -62,8 +58,8 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                   <img 
                     src={project.cover} 
                     alt="Project Cover" 
+                    // 💥 神级修复 3：删掉 loading="lazy"，这几张图极重要，直接加载，彻底告别滑动白块！
                     decoding="async" 
-                    loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                   />
                 ) : (
