@@ -5,7 +5,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Home, Book, MessageSquare, Sparkles, ArrowDown, User } from 'lucide-react';
 import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
 
-// 💥 删除了 LiquidFilters 引入，彻底拔除 SVG 滤镜毒瘤
 import { VoidSpirit } from '../components/features/VoidSpirit';
 import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
 import { NeuralView } from '../components/views/NeuralView';
@@ -82,9 +81,9 @@ export default function Page() {
   ];
 
   return (
-    <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
+    // 💥 修复：去掉了会导致 iOS Safari 渲染截断的 WebkitOverflowScrolling: 'touch'
+    <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col">
       
-      {/* 💥 彻底干掉危险的 CSS：去除了 frost-noise 和无用的 keyframes */}
       <style dangerouslySetInnerHTML={{__html: `
         html, body { overscroll-behavior: none; background-color: #FDFEFE; }
         @keyframes ken-burns {
@@ -95,14 +94,14 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      {/* 💥 安全实现背景图不动的方案！ */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE] translate-z-0">
-         <div className="absolute inset-0 hidden sm:block bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns translate-z-0 will-change-transform" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
-         <div className="absolute inset-0 bg-transparent sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-[24px] translate-z-0 backface-hidden" />
+      {/* 💥 修复：去掉了过载的 translate-z-0 和 will-change，回归正常的 DOM 渲染 */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE]">
+         <div className="absolute inset-0 hidden sm:block bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
+         <div className="absolute inset-0 bg-transparent sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-[24px]" />
       </div>
 
       <motion.div
-        className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group will-change-transform translate-z-0"
+        className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         style={{ rotate: springRotate }} 
         whileHover={{ scale: 1.1 }}
@@ -120,7 +119,7 @@ export default function Page() {
             <motion.div key="home">
                <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
-               <motion.div className="w-full flex justify-center mt-2 mb-10 opacity-40 will-change-transform" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
+               <motion.div className="w-full flex justify-center mt-2 mb-10 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
                  <div className="flex flex-col items-center gap-1.5">
                    <ArrowDown size={14} className="text-slate-500" />
                  </div>
@@ -138,8 +137,9 @@ export default function Page() {
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
+                             {/* 💥 修复：去掉了时间轴卡片的 will-change-transform，释放 GPU 内存 */}
                              <motion.div
-                               className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col will-change-transform translate-z-0"
+                               className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
                                style={{ rotate: isLeft ? '-1.5deg' : '1.5deg' }}
                                initial={{ opacity: 0, y: 30 }}
                                whileInView={{ opacity: 1, y: 0 }}
@@ -176,7 +176,7 @@ export default function Page() {
 
                  <div className="w-full flex justify-center pt-8 pb-20">
                     <motion.div 
-                      className="group bg-white/60 sm:bg-white/40 sm:backdrop-blur-xl border border-white/60 rounded-[32px] p-6 flex items-center gap-5 cursor-pointer shadow-lg transition-all active:scale-[0.98] will-change-transform translate-z-0"
+                      className="group bg-white/60 sm:bg-white/40 sm:backdrop-blur-xl border border-white/60 rounded-[32px] p-6 flex items-center gap-5 cursor-pointer shadow-lg transition-all active:scale-[0.98]"
                       onClick={() => handleNavClick('guestbook')}
                       whileInView={{ scale: [0.9, 1], opacity: [0, 1] }}
                       viewport={{ once: true }}
@@ -202,19 +202,19 @@ export default function Page() {
       </main>
 
       <motion.div 
-        className="fixed bottom-10 inset-x-0 flex justify-center z-50 will-change-transform translate-z-0"
+        className="fixed bottom-10 inset-x-0 flex justify-center z-50"
         initial={{ y: 0, opacity: 1 }}
         animate={{ y: isNavVisible ? 0 : 150, opacity: isNavVisible ? 1 : 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 25 }}
       >
-        <nav className="relative flex items-center p-1.5 rounded-full">
+        <nav className="relative flex items-center p-1 sm:p-1.5 rounded-full">
           
           <div 
-             className="absolute inset-0 z-0 rounded-full overflow-hidden border border-white/40 pointer-events-none"
+             className="absolute inset-0 z-0 rounded-full border border-white/40 pointer-events-none"
              style={{
-               background: "rgba(255, 255, 255, 0.25)",
-               backdropFilter: "blur(12px) saturate(200%) contrast(110%)",
-               boxShadow: "0 30px 60px -12px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 3px rgba(0,0,0,0.05)"
+               background: "rgba(255, 255, 255, 0.4)",
+               backdropFilter: "blur(12px) saturate(150%)",
+               boxShadow: "0 20px 40px -12px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.9)"
              }}
           />
 
@@ -230,8 +230,8 @@ export default function Page() {
                    <VoidSpirit isNavigating={true} isPreparing={isPreparing} jumpType={jumpType} locationId={`nav-${item.id}`} />
                 )}
                 
-                <item.icon size={22} className={`transition-all duration-300 relative z-10 ${isActive ? 'text-slate-900 scale-110' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                <span className={`text-[9px] mt-1 font-black tracking-tight transition-all uppercase relative z-10 ${isActive ? 'text-slate-900 opacity-100' : 'text-slate-400 opacity-0'}`}>
+                <item.icon size={20} className={`transition-all duration-300 relative z-10 ${isActive ? 'text-slate-900 scale-110' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                <span className={`text-[9px] sm:text-[10px] mt-1 font-black tracking-tight transition-all uppercase relative z-10 ${isActive ? 'text-slate-900 opacity-100' : 'text-slate-400 opacity-0'}`}>
                   {item.label}
                 </span>
                 
@@ -239,11 +239,8 @@ export default function Page() {
                   <motion.div 
                     layoutId="nav-pill" 
                     transition={{ type: "spring", stiffness: 400, damping: 21, mass: 1 }} 
-                    className="absolute inset-0 z-0 rounded-full will-change-transform translate-z-0"
-                    style={{ 
-                      background: "linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.01) 100%)", 
-                      boxShadow: "inset 0 2px 6px rgba(0,0,0,0.05), 0 1px 2px rgba(255,255,255,0.4)" 
-                    }}
+                    className="absolute inset-0 z-0 rounded-full"
+                    style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.01) 100%)", boxShadow: "0 1px 2px rgba(255,255,255,0.4)" }}
                   />
                 )}
               </button>
