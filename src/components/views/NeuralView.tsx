@@ -43,26 +43,33 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" }); 
   }, [messages, isThinking]);
 
-  // 💥 修复 3：神级键盘监听！彻底解决键盘收起但导航栏不出来的 Bug！
+  // 💥 修复 3：神级键盘侦测！采用“高度差(Delta)”算法，100% 完美解决导航栏不恢复的 Bug
   useEffect(() => {
-    const initialHeight = window.visualViewport?.height || window.innerHeight;
-    
+    if (!window.visualViewport) return;
+    const vp = window.visualViewport;
+    let lastHeight = vp.height;
+
     const handleResize = () => {
-      const currentHeight = window.visualViewport?.height || window.innerHeight;
-      // 如果高度显著变小，说明键盘弹起了
-      const isKeyboardOpen = currentHeight < initialHeight - 100;
+      const currentHeight = vp.height;
+      const diff = currentHeight - lastHeight;
       
-      // 抛出事件：键盘弹起隐藏导航栏，键盘收起恢复导航栏
-      window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: !isKeyboardOpen }));
-      
-      // 核心杀招：如果键盘收起了，但输入框还占着焦点，强行把它踢掉！
-      if (!isKeyboardOpen) {
-        (document.activeElement as HTMLElement)?.blur();
+      if (diff > 100) {
+        // 高度突然变大 > 100px：说明键盘收起了！
+        window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: true }));
+        // 核心：强制褫夺输入框的焦点，防止死锁
+        if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+          (document.activeElement as HTMLElement).blur();
+        }
+      } else if (diff < -100) {
+        // 高度突然变小 > 100px：说明键盘弹起了！
+        window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: false }));
       }
+      
+      lastHeight = currentHeight;
     };
 
-    window.visualViewport?.addEventListener('resize', handleResize);
-    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+    vp.addEventListener('resize', handleResize);
+    return () => vp.removeEventListener('resize', handleResize);
   }, []);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -75,15 +82,18 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 💥 修复 2：极度 Q 弹的抽屉入场！从 100vh（屏幕最底端）冲上来！
-      initial={{ opacity: 0, scale: 0.85, y: "100vh", borderRadius: "80px" }} 
+      // 💥 修复 2：彻底激活弹簧物理！将 y 值改为纯数字 800，极大提升入场冲刺速度！
+      initial={{ opacity: 0, scale: 0.85, y: 800, borderRadius: "80px" }} 
       animate={{ opacity: 1, scale: 1, y: 0, borderRadius: "40px" }} 
-      exit={{ opacity: 0, scale: 0.9, y: "100vh", borderRadius: "80px", transition: { duration: 0.2 } }}
-      // 把 damping 调低到 20，释放它的弹簧天性，现在会有极其舒服的回弹！
-      transition={{ type: "spring", stiffness: 350, damping: 20, mass: 0.8 }}
+      exit={{ opacity: 0, scale: 0.9, y: 800, borderRadius: "80px", transition: { duration: 0.2 } }}
+      // stiffness(刚度)拉到 400，damping(阻尼)压到 22。它现在会像一个真正的橡胶球一样弹出来！
+      transition={{ type: "spring", stiffness: 400, damping: 22, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      // 💥 修复 1：加上 -mb-8，生生把整个黑框往下拽，完美填补底部的巨大空白！
-      className="flex flex-col h-[83dvh] max-h-[850px] -mb-8 pt-6 px-4 sm:px-0 w-full max-w-md mx-auto overflow-hidden bg-black touch-pan-y relative z-40 shadow-[0_40px_80px_rgba(0,0,0,0.8)]"
+      
+      // 💥 修复 1：终极填坑魔法！
+      // 1. 高度加码到 88dvh。
+      // 2. 加上 -mb-28 (负边距 112px)，强行把 AI 黑框往下拽，一口吞掉外部父容器的巨大白底！
+      className="flex flex-col h-[88dvh] max-h-[850px] -mb-28 pt-6 px-4 sm:px-0 w-full max-w-md mx-auto overflow-hidden bg-black touch-pan-y relative z-40 shadow-[0_40px_80px_rgba(0,0,0,0.8)]"
       style={{
         boxShadow: "inset -1px -1px 3px rgba(255,255,255,0.1)",
         transformOrigin: "bottom center",
@@ -108,7 +118,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-6 pb-36 scrollbar-hide relative z-10 scroll-smooth px-2">
+      <div className="flex-1 overflow-y-auto space-y-6 pb-40 scrollbar-hide relative z-10 scroll-smooth px-2">
         {messages.map((m, i) => (
           <motion.div 
             initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -138,11 +148,10 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         <div ref={scrollRef} className="h-4" />
       </div>
 
-      {/* 💥 底部输入舱 */}
-      {/* 💥 修复缩短：把 inset-x-8 改成了 inset-x-12 (两边各缩进 48px)，变成了一个极其精致、小巧的居中胶囊！ */}
-      <div className="absolute bottom-6 inset-x-10 sm:inset-x-16 z-50">
+      {/* 💥 底部胶囊输入框：因为整个页面被拽下去了，所以把 bottom-6 提到了 bottom-16 以避开导航栏 */}
+      <div className="absolute bottom-16 inset-x-10 sm:inset-x-16 z-50">
         
-        {/* 底部遮罩也要配合缩短 */}
+        {/* 适配遮罩高度，防止消息文字溢出 */}
         <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none -mx-10 sm:-mx-16" />
         
         <div className="p-1 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
@@ -151,7 +160,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
               value={input} 
               onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
               onKeyDown={e => e.key === 'Enter' && handleSend()} 
-              // 移除了这里不靠谱的 onFocus 和 onBlur，全权交给上面的 VisualViewport 去接管！
               placeholder="与它对话..." 
               className="w-full bg-transparent border-none text-white/90 placeholder:text-white/30 text-[14px] font-medium outline-none focus:ring-0 py-3 pl-4 pr-11" 
             />
