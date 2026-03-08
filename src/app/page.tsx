@@ -10,7 +10,7 @@ import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
 import { NeuralView } from '../components/views/NeuralView';
 
 import { NotesView } from '../components/views/NotesView';
-const GuestbookView = (props: any) => <div className="text-slate-800 pt-12 p-4"><h2>Guestbook</h2><p className="text-slate-500 italic mt-4">“留下一段话，证明你曾来过这个灵感角落。”</p></div>;
+import { GuestbookView } from '../components/views/GuestbookView';
 
 const mixedTimeline = [
   { type: "thought", time: "Today, 10:24 AM", text: "灵感总是转瞬即逝，就像这层磨砂玻璃上的水汽。得赶紧把它写进代码里。" },
@@ -142,7 +142,7 @@ export default function Page() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10 max-w-xl mx-auto w-full px-5 pb-32 pt-10 flex-1"
       >
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {activeTab === 'home' && (
             <motion.div 
                key="home"
