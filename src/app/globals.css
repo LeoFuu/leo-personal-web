@@ -6,17 +6,9 @@
 /* 新增：定义深邃星空背景 */
 @layer base {
   body {
-    @apply antialiased text-gray-200;
-    
-    background-color: #0C0C0E;
-    background-image: url('https://w.wallhaven.cc/full/xl/wallhaven-xly66m.png');
-    background-repeat: repeat;
-    background-size: 300px;
-    
-    /* 💥 致命修复：删除了 background-attachment: fixed; */
-    
-    background-blend-mode: overlay;
-    background-image: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 50%, rgba(0,0,0,0.2) 100%), url('https://w.wallhaven.cc/full/xl/wallhaven-xly66m.png');
+    /* 💥 彻底清空这里的背景！把背景的控制权完完全全还给 page.tsx！ */
+    @apply antialiased text-slate-900;
+    background-color: #FAFAFA; /* 只留一个极浅的底色保底 */
   }
 }
 

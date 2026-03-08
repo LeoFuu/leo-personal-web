@@ -9,7 +9,7 @@ import { VoidSpirit } from '../components/features/VoidSpirit';
 import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
 import { NeuralView } from '../components/views/NeuralView';
 
-const NotesView = (props: any) => <div className="text-slate-800 pt-12 p-4"><h2>Digital Garden</h2><p className="text-slate-500 italic mt-4">“这里记录着我所有未成熟的思想火花...”</p></div>;
+import { NotesView } from '../components/views/NotesView';
 const GuestbookView = (props: any) => <div className="text-slate-800 pt-12 p-4"><h2>Guestbook</h2><p className="text-slate-500 italic mt-4">“留下一段话，证明你曾来过这个灵感角落。”</p></div>;
 
 const mixedTimeline = [
@@ -94,11 +94,34 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      {/* 💥 修复白块：绝对不要在 iOS 的 fixed 元素上用 contain: paint！直接用最基础的 div！ */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[#F4F6F9] sm:bg-[#FDFEFE]">
-         <div className="absolute inset-0 hidden sm:block bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
-         <div className="absolute inset-0 bg-transparent sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-[24px]" />
+      {/* ✨ 修正版方案一：Mac Studio 银 (拉丝金属与强对比光影) */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[#E2E8F0]"> 
+        
+        {/* 1. 微观金属噪点 */}
+        <div 
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        
+        {/* 2. 强力洗墙顶灯 */}
+        <div 
+          className="absolute top-0 inset-x-0 h-[80vh]"
+          style={{
+            background: 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0.4) 40%, transparent 100%)'
+          }}
+        />
+        
+        {/* 3. 底部边缘暗角 */}
+        <div className="absolute bottom-0 inset-x-0 h-[20vh] bg-gradient-to-t from-[#CBD5E1]/80 to-transparent" />
       </div>
+
+      {/* 💥 神级 UX 修复：底部羽化遮罩！
+          这个渐变层会在 `z-40`（刚好压在滚动内容上面，但在导航栏 z-50 下面）。
+          当你的卡片滚到底部时，会像“沉入雾中”一样慢慢消失，极其高级！
+      */}
+      <div className="fixed bottom-0 inset-x-0 h-40 bg-gradient-to-t from-[#CBD5E1] via-[#CBD5E1]/80 to-transparent pointer-events-none z-40" />
 
       <motion.div
         className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group"
@@ -113,17 +136,12 @@ export default function Page() {
         </div>
       </motion.div>
 
-      {/* 💥 终极性能修复：
-          1. 删除了原先包裹在 main 上的、会导致全页面疯狂重绘的 transition-all 类名！
-          2. 使用 motion.main 来实现纯净、不污染子元素的透明度和位移动画！
-      */}
       <motion.main 
         initial={{ opacity: 0, y: 15 }}
         animate={isLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10 max-w-xl mx-auto w-full px-5 pb-32 pt-10 flex-1"
       >
-        {/* 💥 修复：把 mode="wait" 去掉。手机端让组件自由挂载，防止路由切换时的卡死截断 */}
         <AnimatePresence>
           {activeTab === 'home' && (
             <motion.div 
@@ -135,7 +153,8 @@ export default function Page() {
             >
                <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
-               <motion.div className="w-full flex justify-center mt-2 mb-10 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
+               {/* 💥 修复：把 mb-10 改成 mb-4，让随手贴稍微往上提一点，刚好露出一个头部！ */}
+               <motion.div className="w-full flex justify-center mt-2 mb-4 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
                  <div className="flex flex-col items-center gap-1.5">
                    <ArrowDown size={14} className="text-slate-500" />
                  </div>
@@ -155,7 +174,6 @@ export default function Page() {
                          <div className="sticky z-20" style={{ top: stickyTop }}>
                          <motion.div
                                className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
-                               // 💥 加上 isolation: 'isolate'，保护时间轴卡片不被 Safari 撕裂！
                                style={{ rotate: isLeft ? '-1.5deg' : '1.5deg', isolation: 'isolate' }}
                                initial={{ opacity: 0, y: 30 }}
                                whileInView={{ opacity: 1, y: 0 }}

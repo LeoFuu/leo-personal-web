@@ -18,9 +18,9 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
            key={id}
            style={{ 
              willChange: 'transform',
-             // 💥 神级代码 1：强制开启 iOS 硬件级圆角遮罩，专治文字和图片在动画时飞出圆角边界！
              WebkitMaskImage: '-webkit-radial-gradient(white, black)',
              transform: 'translateZ(0)',
+             isolation: 'isolate', // 💥 保持隔离
            }}
            animate={{
              rotate: position === 0 ? 0 : position === 1 ? 5 : 10,
@@ -30,8 +30,11 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
              zIndex: 30 - position * 10,
            }}
            transition={{ type: 'spring', stiffness: 400, damping: 25, mass: 0.8 }}
-           className={`absolute inset-0 ${CARD_COLORS[id]} rounded-[48px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] p-6 flex flex-col border border-white/20 overflow-hidden`}
+           className={`absolute inset-0 rounded-[48px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] p-6 flex flex-col border border-white/40 overflow-hidden group`}
          >
+            {/* 💥 终极硬壳：把颜色抽离成一个绝对定位的底层色块！这样 GPU 绝对不敢把它丢掉！ */}
+            <div className={`absolute inset-0 ${CARD_COLORS[id]} z-[-1] pointer-events-none`} />
+
             {/* 数字底纹 */}
             <div className="absolute inset-0 overflow-hidden rounded-[48px] pointer-events-none z-0">
                <div className="absolute -bottom-6 -right-6 text-[180px] text-black/5 font-black tracking-tighter select-none">
@@ -41,8 +44,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
 
             {/* 顶部标签 */}
             <div className="flex justify-between items-start relative z-20">
-               {/* 💥 神级代码 2：手机端坚决不用毛玻璃 (backdrop-blur-none)，防止 Safari 背景丢失 Bug！ */}
-               <div className="bg-white/95 sm:bg-white/50 backdrop-blur-none sm:backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/40 shadow-sm">
+               <div className="bg-white/95 sm:bg-white/50 backdrop-blur-none sm:backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-black/80 uppercase tracking-widest border border-white/60 shadow-sm">
                  Project {id + 1}
                </div>
                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-transform">
@@ -51,7 +53,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
             </div>
 
             {/* 封面图 */}
-            <div className="absolute inset-x-8 top-[64px] bottom-[186px] z-10 rounded-[20px] overflow-hidden bg-black/5 border border-white/30 shadow-inner group">
+            <div className="absolute inset-x-8 top-[64px] bottom-[186px] z-10 rounded-[20px] overflow-hidden bg-black/5 border border-white/50 shadow-inner">
                 {project?.cover ? (
                   <img 
                     src={project.cover} 
@@ -69,8 +71,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
             
             {/* 底部信息舱 */}
             <div className="mt-auto relative z-20">
-               {/* 💥 神级代码 3：手机端用不透明度 95% 替代毛玻璃，视觉毫无影响，性能提升 100 倍，彻底告别撕裂！ */}
-               <div className="p-4 sm:p-5 rounded-[32px] border border-white/50 shadow-lg bg-white/95 sm:bg-white/60 backdrop-blur-none sm:backdrop-blur-xl flex flex-col gap-3">
+               <div className="p-4 sm:p-5 rounded-[32px] border border-white/60 shadow-xl bg-white/95 sm:bg-white/60 backdrop-blur-none sm:backdrop-blur-xl flex flex-col gap-3">
                  <div className="flex items-center gap-3">
                     <div className="w-16 h-16 shrink-0 rounded-[16px] bg-gradient-to-br from-white to-black/5 border border-white shadow-sm overflow-hidden flex items-center justify-center p-0.5">
                        {project?.icon ? (
@@ -80,7 +81,8 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                        )}
                     </div>
                     <div className="flex-1 min-w-0">
-                       <h2 className={`text-2xl font-black ${TEXT_COLORS[id]} leading-none mb-1 tracking-tight truncate`}>
+                       {/* 💥 修复：删掉 truncate，加上 line-clamp-2（最多两行），并把 text-2xl 稍微调小一点防止太挤 */}
+                       <h2 className={`text-[20px] font-black ${TEXT_COLORS[id]} leading-[1.1] mb-1 tracking-tight line-clamp-2`}>
                           {project?.title || "Upcoming"}
                        </h2>
                        <p className="text-[9px] font-bold text-black/40 uppercase tracking-widest truncate">
@@ -94,7 +96,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                  <div className="flex items-center gap-2 pt-1">
                     <button 
                        onClick={(e) => { e.stopPropagation(); onOpenDetail(id); }}
-                       className={`flex-1 py-2.5 rounded-full bg-white hover:bg-gray-50 border border-white/50 shadow-sm ${TEXT_COLORS[id]} text-[10px] font-black uppercase tracking-widest transition-all active:scale-95`}
+                       className={`flex-1 py-2.5 rounded-full bg-white hover:bg-gray-50 border border-white/60 shadow-md ${TEXT_COLORS[id]} text-[10px] font-black uppercase tracking-widest transition-all active:scale-95`}
                     >
                        View Detail
                     </button>
