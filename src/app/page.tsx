@@ -15,22 +15,8 @@ const GuestbookView = (props: any) => <div className="text-slate-800 pt-12 p-4">
 
 const mixedTimeline = [
   { type: "thought", time: "Today, 10:24 AM", text: "灵感总是转瞬即逝，就像这层磨砂玻璃上的水汽。得赶紧把它写进代码里。" },
-  { 
-    type: "guestbook", 
-    time: "Yesterday, 20:15 PM", 
-    user: "匿名极客", 
-    message: "这个卡片翻转的物理手感绝了！也是独立开发的吗？", 
-    reply: "哈哈感谢！用 Framer Motion 调了很久的弹簧参数，算是对交互的一点小执念 😆" 
-  },
-  { type: "thought", time: "Oct 24, 14:30 PM", text: "有时候，Bug 是系统在试图和你对话。倾听它，而不是对抗它。" },
-  { 
-    type: "guestbook", 
-    time: "Oct 22, 09:00 AM", 
-    user: "DesignLover", 
-    message: "首页的小黑精灵太可爱了！可以出个教程吗？", 
-    reply: "安排上了！之后会在数字花园里更新一期 SVG + Motion 的流体动画教程～" 
-  },
-  { type: "thought", time: "Oct 18, 16:45 PM", text: "比起完美的架构，我更喜欢有生命力的代码。能跑起来，就有它的倔强。" }
+  { type: "guestbook", time: "Yesterday, 20:15 PM", user: "匿名极客", message: "这个卡片翻转的物理手感绝了！也是独立开发的吗？", reply: "哈哈感谢！用 Framer Motion 调了很久的弹簧参数，算是对交互的一点小执念 😆" },
+  { type: "thought", time: "Oct 24, 14:30 PM", text: "有时候，Bug 是系统在试图和你对话。倾听它，而不是对抗它。" }
 ];
 
 export default function Page() {
@@ -41,52 +27,53 @@ export default function Page() {
   const [jumpType, setJumpType] = useState<'hop' | 'dive' | 'soar'>('hop'); 
   const [isLoaded, setIsLoaded] = useState(false);
   
-  // 💥 增加一个非常重要的 pageExit 定时器，用来错开页面销毁的时间
+  // 💥 新增：监听导航栏的显示状态 (配合弹窗的隔空喊话)
+  const [isNavVisible, setIsNavVisible] = useState(true);
+
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, spirit: null, pageExit: null });
 
   const { scrollY } = useScroll();
   const rawRotate = useTransform(scrollY, [0, 2000], [0, 1080]); 
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
-  useEffect(() => { setIsLoaded(true); }, []);
+  useEffect(() => { 
+    setIsLoaded(true); 
+    // 💥 挂载导航栏监听器
+    const handleToggle = (e: any) => setIsNavVisible(e.detail);
+    window.addEventListener('toggle-navbar', handleToggle);
+    return () => window.removeEventListener('toggle-navbar', handleToggle);
+  }, []);
 
   const handleNavClick = (tabId: string) => {
-    // 这里做了一个小优化，用 pendingTab 判断，防止在跳跃过程中狂点
     if (tabId === activeTab || pendingTab === tabId) return;
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
     
-    // 1. 瞬间滚回顶部（不要在这里立马切换页面！）
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // 2. 原地深蹲蓄力！
     const isStartingFromPage = spiritTarget === null;
     setIsPreparing(true);
     setJumpType(isStartingFromPage ? 'dive' : 'hop');
 
-    // 3. 💥 核心修复：150ms 蓄力完成后，起飞的同时切换页面！
     timers.current.spirit = setTimeout(() => {
-        setIsPreparing(false);      // 释放弹力
-        setSpiritTarget(tabId);     // 目标设定为导航栏
-        setPendingTab(tabId);       // 锁住新页面的位置
+        setIsPreparing(false);      
+        setSpiritTarget(tabId);     
+        setPendingTab(tabId);       
         
-        // 💥 最关键的一步：延迟 50ms 切换页面！
-        // 保证小精灵从原名片脱离起飞后，原名片才开始销毁！这就彻底解决了你说的“没有起跳动作直接闪现”的Bug！
         timers.current.pageExit = setTimeout(() => {
             setActiveTab(tabId);
         }, 50);
     }, 150); 
 
-    // 4. 休息阶段：在导航栏待命 3 秒后，飞回名片
     timers.current.prepare = setTimeout(() => {
-        setIsPreparing(true); // 回程深蹲
-        setJumpType(tabId === 'home' ? 'soar' : 'dive'); // 向上飞用 soar
+        setIsPreparing(true); 
+        setJumpType(tabId === 'home' ? 'soar' : 'dive'); 
 
         timers.current.jump = setTimeout(() => {
-            setIsPreparing(false); // 释放起飞
-            setSpiritTarget(null); // 离开导航栏
-            setPendingTab(null);   // 降落到页面
+            setIsPreparing(false); 
+            setSpiritTarget(null); 
+            setPendingTab(null);   
         }, 150);
-    }, 3150); // 150ms初次蓄力 + 3000ms休息
+    }, 3150); 
   };
 
   const navItems = [
@@ -97,7 +84,8 @@ export default function Page() {
   ];
 
   return (
-    <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col">
+    // 💥 性能优化：加入 WebkitOverflowScrolling 开启 iOS 原生丝滑滚动
+    <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
       <LiquidFilters />
       
       <style dangerouslySetInnerHTML={{__html: `
@@ -114,18 +102,20 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[#FDFEFE]">
-         <div className="absolute inset-0 bg-[url('/bg.jpg')] bg-cover bg-center animate-ken-burns" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
-         <div className="absolute inset-0 bg-white/30 backdrop-blur-[45px]" />
+      {/* 💥 性能终极释放区：背景层硬件隔离！ */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[#FDFEFE] translate-z-0">
+         {/* 💥 优化1：只在PC端(sm)播放动画，手机端直接静态图保命。强制 will-change-transform */}
+         <div className="absolute inset-0 bg-[url('/bg.jpg')] bg-cover bg-center sm:animate-ken-burns translate-z-0 will-change-transform" style={{ filter: 'contrast(1.02) brightness(1.01)' }} />
+         {/* 💥 优化2：模糊度降到24px（人眼根本看不出区别），加上 backface-hidden 切断重绘 */}
+         <div className="absolute inset-0 bg-white/40 backdrop-blur-[24px] translate-z-0 backface-hidden" />
       </div>
 
       <motion.div
-        className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group"
+        className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group will-change-transform translate-z-0"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        style={{ rotate: springRotate, WebkitTransform: 'translateZ(0)' }} 
+        style={{ rotate: springRotate }} 
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        title="Release Tension"
       >
         <div className="absolute top-1.5 w-1.5 h-1.5 bg-slate-800 rounded-full shadow-sm opacity-80" />
         <div className="w-4 h-4 rounded-full border-[2px] border-slate-800/30 flex items-center justify-center">
@@ -139,7 +129,7 @@ export default function Page() {
             <motion.div key="home">
                <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
-               <motion.div className="w-full flex justify-center mt-2 mb-10 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
+               <motion.div className="w-full flex justify-center mt-2 mb-10 opacity-40 will-change-transform" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
                  <div className="flex flex-col items-center gap-1.5">
                    <ArrowDown size={14} className="text-slate-500" />
                  </div>
@@ -158,8 +148,8 @@ export default function Page() {
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
                              <motion.div
-                               className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
-                               style={{ rotate: isLeft ? '-1.5deg' : '1.5deg', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
+                               className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col will-change-transform translate-z-0"
+                               style={{ rotate: isLeft ? '-1.5deg' : '1.5deg' }}
                                initial={{ opacity: 0, y: 30 }}
                                whileInView={{ opacity: 1, y: 0 }}
                                viewport={{ margin: "50px", once: true }} 
@@ -185,15 +175,6 @@ export default function Page() {
                                             <p className="text-[12px] font-medium text-slate-700 leading-relaxed">{item.message}</p>
                                          </div>
                                       </div>
-                                      <div className="flex gap-3 items-start flex-row-reverse">
-                                         <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center shrink-0 shadow-md">
-                                            <Sparkles size={12} className="text-[#D9F99D]" />
-                                         </div>
-                                         <div className="flex-1 bg-slate-800 rounded-[16px] rounded-tr-none p-3 shadow-md">
-                                            <div className="text-[10px] font-bold text-slate-400 mb-1 flex justify-end">Leo's Reply</div>
-                                            <p className="text-[12px] font-medium text-white/90 leading-relaxed">{item.reply}</p>
-                                         </div>
-                                      </div>
                                    </div>
                                 )}
                              </motion.div>
@@ -204,7 +185,7 @@ export default function Page() {
 
                  <div className="w-full flex justify-center pt-8 pb-20">
                     <motion.div 
-                      className="group bg-white/60 sm:bg-white/40 sm:backdrop-blur-xl border border-white/60 rounded-[32px] p-6 flex items-center gap-5 cursor-pointer shadow-lg transition-all active:scale-[0.98]"
+                      className="group bg-white/60 sm:bg-white/40 sm:backdrop-blur-xl border border-white/60 rounded-[32px] p-6 flex items-center gap-5 cursor-pointer shadow-lg transition-all active:scale-[0.98] will-change-transform translate-z-0"
                       onClick={() => handleNavClick('guestbook')}
                       whileInView={{ scale: [0.9, 1], opacity: [0, 1] }}
                       viewport={{ once: true }}
@@ -229,14 +210,24 @@ export default function Page() {
         </AnimatePresence>
       </main>
 
-      <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
+      {/* 💥 终极导航栏：包裹 motion.div 响应隐身指令 */}
+      <motion.div 
+        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 will-change-transform translate-z-0"
+        initial={{ y: 0, opacity: 1 }}
+        animate={{ 
+          y: isNavVisible ? 0 : 150, 
+          opacity: isNavVisible ? 1 : 0 
+        }}
+        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+      >
         <nav className="relative flex items-center p-1.5 rounded-full">
           
           <div 
              className="absolute inset-0 z-0 rounded-full overflow-hidden border border-white/40 pointer-events-none"
              style={{
                background: "rgba(255, 255, 255, 0.25)",
-               backdropFilter: "blur(40px) saturate(200%) contrast(110%)",
+               // 💥 稍微降低毛玻璃税
+               backdropFilter: "blur(24px) saturate(200%) contrast(110%)",
                boxShadow: "0 30px 60px -12px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 3px rgba(0,0,0,0.05)"
              }}
           >
@@ -251,8 +242,6 @@ export default function Page() {
             return (
               <button key={item.id} onClick={() => handleNavClick(item.id)} className="relative z-10 flex flex-col items-center justify-center w-20 h-14 rounded-full transition-all cursor-pointer active:scale-95 group">
                 
-                {/* 💥 彻底脱掉所有防弹衣！让自带居中系统的小精灵直接挂载！ */}
-                {/* 再也不会有父级定位冲突导致的闪现和悬浮了！ */}
                 {showSpirit && (
                    <VoidSpirit isNavigating={true} isPreparing={isPreparing} jumpType={jumpType} locationId={`nav-${item.id}`} />
                 )}
@@ -266,7 +255,7 @@ export default function Page() {
                   <motion.div 
                     layoutId="nav-pill" 
                     transition={{ type: "spring", stiffness: 400, damping: 21, mass: 1 }} 
-                    className="absolute inset-0 z-0 rounded-full"
+                    className="absolute inset-0 z-0 rounded-full will-change-transform translate-z-0"
                     style={{ 
                       background: "linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.01) 100%)", 
                       boxShadow: "inset 0 2px 6px rgba(0,0,0,0.05), 0 1px 2px rgba(255,255,255,0.4)" 
@@ -277,7 +266,7 @@ export default function Page() {
             );
           })}
         </nav>
-      </div>
+      </motion.div>
     </div>
   );
 }

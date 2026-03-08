@@ -58,12 +58,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ projectId, onClose }
       {projectId !== null && project && (
         <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center pointer-events-auto">
           {/* 全屏毛玻璃遮罩 */}
+          {/* 💥 弹窗性能终极优化：绝不动摇 backdropFilter，只让 GPU 处理最擅长的 Opacity！ */}
           <motion.div
-            initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            animate={{ opacity: 1, backdropFilter: 'blur(8px)' }}
-            exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            transition={{ duration: 0.3 }}
-            className="absolute inset-0 bg-black/40 will-change-[opacity,backdrop-filter] translate-z-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            // 直接把 backdrop-blur 属性写死在 class 里！
+            className="absolute inset-0 bg-black/40 backdrop-blur-[8px] will-change-opacity translate-z-0"
             onClick={onClose}
           />
 
