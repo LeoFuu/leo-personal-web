@@ -13,6 +13,8 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false); 
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  
   const isFirstRender = useRef(true);
   const isPresent = useIsPresent();
 
@@ -44,33 +46,32 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" }); 
   }, [messages, isThinking]);
 
-  // 💥 恢复你验证过的：神级的高度差侦测键盘算法，绝不闪退！
   useEffect(() => {
     if (!window.visualViewport) return;
     const vp = window.visualViewport;
-    let lastHeight = vp.height;
+    const baseHeight = window.innerHeight;
 
     const handleResize = () => {
-      const currentHeight = vp.height;
-      const diff = currentHeight - lastHeight;
-      
-      if (diff > 100) {
-        setIsKeyboardOpen(false);
-        window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: true }));
-        if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-          (document.activeElement as HTMLElement).blur();
+      if (vp.height > baseHeight * 0.85) {
+        if (document.activeElement === inputRef.current) {
+          inputRef.current?.blur();
         }
-      } else if (diff < -100) {
-        setIsKeyboardOpen(true);
-        window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: false }));
       }
-      
-      lastHeight = currentHeight;
     };
-
     vp.addEventListener('resize', handleResize);
     return () => vp.removeEventListener('resize', handleResize);
   }, []);
+
+  const handleInputFocus = () => {
+    setIsKeyboardOpen(true);
+    window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: false }));
+    setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+  };
+
+  const handleInputBlur = () => {
+    setIsKeyboardOpen(false);
+    window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: true }));
+  };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -82,17 +83,17 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 💥 修复平头 Bug：在 initial 强制注入 40px 的圆角，保证一出场就是完美的圆脑袋！
-      initial={{ opacity: 0, y: "100%", top: "10vh", borderTopLeftRadius: "40px", borderTopRightRadius: "40px" }} 
+      // 💥 修复平头 Bug：在 initial 里强制注入圆角！删除了 className 里的 rounded
+      initial={{ opacity: 0, y: "100%", top: "24px", borderRadius: "40px 40px 0px 0px" }} 
       exit={{ opacity: 0, y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
       
-      // 💥 动态吸顶：开键盘时 `top: 0vh` 并干掉圆角，彻底消灭上方的空白！
+      // 💥 极致空间美学：没开键盘时，顶部只留 24px（足够显示圆脑袋，又极大扩展了聊天高度）
+      // 打开键盘时，瞬间吸附到 0px，圆角变成直角全屏！
       animate={{ 
         opacity: 1, 
         y: 0,
-        top: isKeyboardOpen ? '0vh' : '10vh',
-        borderTopLeftRadius: isKeyboardOpen ? '0px' : '40px',
-        borderTopRightRadius: isKeyboardOpen ? '0px' : '40px'
+        top: isKeyboardOpen ? '0px' : '24px',
+        borderRadius: isKeyboardOpen ? '0px 0px 0px 0px' : '40px 40px 0px 0px'
       }} 
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
@@ -103,7 +104,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         borderTop: '1px solid rgba(255,255,255,0.05)'
       }}
     >
-      {/* 💥 终极刺杀白雾：精准定向抹除 page.tsx 里的 z-40 底部渐变层！ */}
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
           nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }
@@ -111,8 +111,8 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         `}} />
       )}
 
-      {/* 进一步加高 pt-10，把眼睛往下沉，绝不让它蹭到顶部的边缘 */}
-      <div className="shrink-0 h-[140px] flex justify-center items-center gap-6 relative z-20 pointer-events-none bg-[#0A0A0A] border-b border-white/5 pt-10 pb-4">
+      {/* 调整头部的内边距，让它在 24px 的缝隙下依然保持优雅 */}
+      <div className="shrink-0 h-[120px] flex justify-center items-center gap-6 relative z-20 pointer-events-none bg-[#0A0A0A] border-b border-white/5 pt-6 pb-2">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)] translate-z-0">
             <motion.div 
@@ -123,8 +123,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
-      {/* 独立滚动区，长文流畅到底 */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 pt-6 pb-4 scrollbar-hide scroll-smooth relative z-10">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 pt-4 pb-[160px] scrollbar-hide scroll-smooth relative z-10">
         <div className="flex flex-col space-y-6">
           {messages.map((m, i) => (
             <motion.div 
@@ -155,7 +154,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         </div>
       </div>
 
-      {/* 底部悬浮输入框 */}
       <div 
         className="shrink-0 px-6 sm:px-10 bg-[#0A0A0A] w-full transition-all duration-300 relative z-30"
         style={{ paddingBottom: isKeyboardOpen ? '16px' : '110px', paddingTop: '12px' }}
@@ -163,9 +161,12 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         <div className="p-1 bg-white/[0.08] border border-white/10 backdrop-blur-2xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
           <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
             <input 
+              ref={inputRef}
               value={input} 
               onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
               onKeyDown={e => e.key === 'Enter' && handleSend()} 
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
               placeholder="与数字分身对话..." 
               className="w-full bg-transparent border-none text-white/90 placeholder:text-white/40 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-5 pr-11" 
             />
@@ -179,6 +180,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
           </div>
         </div>
       </div>
+
     </motion.div>
   );
 };
