@@ -52,13 +52,15 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     const baseHeight = window.innerHeight;
 
     const handleResize = () => {
-      if (vp.height > baseHeight * 0.85) {
-        if (document.activeElement === inputRef.current) {
-          inputRef.current?.blur();
-        }
+      const isOpen = vp.height < baseHeight * 0.85;
+      setIsKeyboardOpen(isOpen);
+      window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: !isOpen }));
+      if (!isOpen && document.activeElement === inputRef.current) {
+        inputRef.current?.blur();
       }
     };
     vp.addEventListener('resize', handleResize);
+    handleResize(); 
     return () => vp.removeEventListener('resize', handleResize);
   }, []);
 
@@ -83,29 +85,25 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 💥 性能核弹一：纯 GPU 的 Y 轴动画 + 纯字符串圆角！
-      // 绝对不改 top！绝对不引发重绘！流畅度瞬间翻倍！
-      initial={{ opacity: 0, y: "100%", borderRadius: "40px" }} 
-      animate={{ 
-        opacity: 1, 
-        // 键盘开启：回到 0px 极速吸顶；键盘关闭：向下平移 24px（刚好露出 24px 的缝隙）
-        y: isKeyboardOpen ? 0 : 24,
-        borderRadius: isKeyboardOpen ? "0px" : "40px"
-      }} 
-      exit={{ opacity: 0, y: "100%", transition: { duration: 0.2, ease: "easeIn" } }}
-      transition={{ type: "spring", stiffness: 400, damping: 30, mass: 0.8 }}
+      initial={{ y: "100%" }} 
+      animate={{ y: 0 }} 
+      exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
+      transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
       
-      // 💥 性能核弹二：利用 bottom-[-24px] 让容器比屏幕本身高出 24px！
-      // 这样当它整体下移 24px 时，底部刚好和屏幕完美对齐，不需要任何裁剪！
-      className="fixed inset-x-0 top-0 bottom-[-24px] mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden"
+      // 💥 修复 2（分离与白缝）：坚如磐石的 absolute 定位！
+      // 底部死死焊在 bottom-0，高度通过 isKeyboardOpen 动态切换全屏或 95%！绝不会被拉断！
+      // 加上 rounded-t-[40px] 静态圆角，抛弃易错的动画渲染。
+      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] rounded-t-[40px] flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.8)]"
       style={{
-        willChange: 'transform, opacity, border-radius', // 告诉 GPU 提前加速这三个属性
-        transform: 'translateZ(0)',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        overscrollBehavior: 'none'
+        height: isKeyboardOpen ? '100dvh' : '95dvh',
+        willChange: 'transform, height',
+        overflow: 'hidden', 
+        overscrollBehavior: 'none', // 物理阉割 iOS 橡皮筋回弹
+        WebkitMaskImage: '-webkit-radial-gradient(white, black)' // 神级防刺穿：强制开启硬件级圆角裁切！
       }}
     >
+      {/* 彻底铲除 page.tsx 的干扰 */}
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
           nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }
@@ -114,8 +112,9 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         `}} />
       )}
 
-      {/* 顶部大眼睛 */}
-      <div className="absolute top-0 inset-x-0 h-[110px] flex justify-center items-center gap-6 z-20 pointer-events-none bg-[#0A0A0A] border-b border-white/5 pt-6 pb-2">
+      {/* 💥 修复 1（真假平头）：彻底删除这个容器的所有 bg-color（背景色）！ */}
+      {/* 让它变成完全透明，它就再也没有能力去遮挡外层的圆角了！ */}
+      <div className="shrink-0 h-[110px] w-full flex justify-center items-center gap-6 relative z-20 pointer-events-none border-b border-white/5 pt-4 bg-transparent">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)] translate-z-0">
             <motion.div 
@@ -126,16 +125,9 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
-      {/* 消息滚动区 */}
-      <div 
-        className="absolute inset-x-0 overflow-y-auto px-4 sm:px-6 scrollbar-hide scroll-smooth z-10"
-        style={{
-          top: '110px',
-          bottom: isKeyboardOpen ? '100px' : '170px',
-          overscrollBehaviorY: 'contain' 
-        }}
-      >
-        <div className="flex flex-col space-y-6 pt-4 pb-6">
+      {/* 消息滚动区：坚固的独立物理滚动轴 */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 scroll-smooth z-10 scrollbar-hide" style={{ overscrollBehaviorY: 'contain' }}>
+        <div className="flex flex-col space-y-6 pt-4 pb-[160px]">
           {messages.map((m, i) => (
             <motion.div 
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -161,22 +153,20 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
               <div className="max-w-[75%]"><div className="px-5 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl flex items-center gap-2"><Terminal size={14} className="text-white/40" /><span className="text-[12px] font-mono text-white/50 animate-pulse">Thinking...</span></div></div>
             </motion.div>
           )}
-          <div ref={scrollRef} className="h-2 shrink-0" />
+          <div ref={scrollRef} className="h-4 shrink-0" />
         </div>
       </div>
 
-      {/* 底部悬浮输入框 */}
+      {/* 💥 修复 3（白雾遮盖）：我把输入框上方的所有渐变阴影连根拔起！只有纯粹的黑色底座，绝不遮挡文字！ */}
       <div 
-        className="absolute inset-x-0 bottom-0 bg-[#0A0A0A] z-30 transition-all duration-300"
-        // 💥 完美动态底距：
-        // 键盘关闭（页面下移24px），补偿后依然保持正常的 110px
-        // 键盘打开（页面吸顶上移，底部溢出 24px），在 16px 基础上+24px = 40px，完美卡位不遮挡！
-        style={{ paddingBottom: isKeyboardOpen ? '40px' : '110px', paddingTop: '12px' }}
+        className="absolute bottom-0 left-0 w-full transition-all duration-300 z-30 bg-[#0A0A0A]"
+        style={{ 
+          paddingBottom: isKeyboardOpen ? '20px' : '100px', // 完美躲避导航栏，开键盘时无缝贴合
+          paddingTop: '16px' 
+        }}
       >
-        <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pointer-events-none" />
-        
-        <div className="px-6 sm:px-10">
-          <div className="p-1 bg-white/[0.08] border border-white/10 backdrop-blur-2xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+        <div className="px-6">
+          <div className="p-1 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
               <input 
                 ref={inputRef}
