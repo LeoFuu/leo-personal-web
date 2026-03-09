@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
+  "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
@@ -11,8 +11,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  
   "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
     "framer-motion": "^12.35.0",
     "lucide-react": "^0.577.0",
     "next": "^16.1.6",

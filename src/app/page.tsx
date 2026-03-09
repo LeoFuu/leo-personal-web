@@ -11,11 +11,8 @@ import { NeuralView } from '../components/views/NeuralView';
 import { NotesView } from '../components/views/NotesView';
 import { GuestbookView } from '../components/views/GuestbookView';
 
-const mixedTimeline = [
-  { type: "thought", time: "Today, 10:24 AM", text: "灵感总是转瞬即逝，就像这层磨砂玻璃上的水汽。得赶紧把它写进代码里。" },
-  { type: "guestbook", time: "Yesterday, 20:15 PM", user: "匿名极客", message: "这个卡片翻转的物理手感绝了！也是独立开发的吗？", reply: "哈哈感谢！用 Framer Motion 调了很久的弹簧参数，算是对交互的一点小执念 😆" },
-  { type: "thought", time: "Oct 24, 14:30 PM", text: "有时候，Bug 是系统在试图和你对话。倾听它，而不是对抗它。" }
-];
+// 💥 引入咱们刚才建好的通讯兵
+import { supabase } from '../lib/supabase';
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState('home');
@@ -24,54 +21,96 @@ export default function Page() {
   const [isPreparing, setIsPreparing] = useState(false);
   const [jumpType, setJumpType] = useState<'hop' | 'dive' | 'soar'>('hop'); 
   
-  // 开机三段式状态
   const [bootState, setBootState] = useState<'booting' | 'clearing' | 'ready'>('booting');
   const [isNavVisible, setIsNavVisible] = useState(true);
   
+  // 💥 新增状态：用来存放从数据库拉取的真数据
+  const [timelineData, setTimelineData] = useState<any[]>([]);
+
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, spirit: null, pageExit: null });
-  // 💥 拿回丢失的视频控制权！
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const { scrollY } = useScroll();
   const rawRotate = useTransform(scrollY, [0, 2000], [0, 1080]); 
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
-  // 💥 修复 1：单向状态锁，绝不倒流！
+  // 💥 核心逻辑：组件挂载时，去 Supabase 拉取数据！
+  useEffect(() => {
+    const fetchTimelineData = async () => {
+      try {
+        // 1. 并发拉取：同时去拿最新的 5条随手贴 和 5条已审核留言
+        // 1. 并发拉取：同时去拿最新的 5条随手贴 和 5条【被精选】的留言
+        const [thoughtsRes, guestbookRes] = await Promise.all([
+          supabase.from('thoughts').select('*').order('created_at', { ascending: false }).limit(5),
+          
+          // 💥 加上了 .eq('is_featured', true)！现在只有你打钩的留言才有资格上首页！
+          supabase.from('guestbook').select('*')
+            .eq('is_approved', true)
+            .eq('is_featured', true) 
+            .order('created_at', { ascending: false })
+            .limit(5)
+        ]);
+
+        if (thoughtsRes.error) console.error("Thoughts Error:", thoughtsRes.error);
+        if (guestbookRes.error) console.error("Guestbook Error:", guestbookRes.error);
+
+        // 2. 时间格式化工具（把它变成类似 "Oct 24, 14:30 PM" 的高级格式）
+        const formatTime = (isoString: string) => {
+          const date = new Date(isoString);
+          return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        };
+
+        // 3. 格式化并打上类型标签
+        const thoughts = (thoughtsRes.data || []).map(t => ({
+          type: 'thought',
+          id: `t-${t.id}`,
+          time: formatTime(t.created_at),
+          text: t.content,
+          timestamp: new Date(t.created_at).getTime()
+        }));
+
+        const guestbooks = (guestbookRes.data || []).map(g => ({
+          type: 'guestbook',
+          id: `g-${g.id}`,
+          time: formatTime(g.created_at),
+          user: g.nickname,
+          message: g.content,
+          reply: g.reply,
+          timestamp: new Date(g.created_at).getTime()
+        }));
+
+        // 4. 混合大排序：按时间戳从新到旧排，最后只取前 10 条展示
+        const merged = [...thoughts, ...guestbooks]
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, 10);
+
+        setTimelineData(merged);
+      } catch (error) {
+        console.error("数据拉取严重失败:", error);
+      }
+    };
+
+    fetchTimelineData();
+  }, []);
+
   const triggerClearing = useCallback(() => {
     setBootState(prev => {
-      // 只有在 booting 状态下，才允许变成 clearing。防止 5秒兜底定时器在网页加载完后捣乱闪黑！
       if (prev === 'booting') return 'clearing';
       return prev;
     });
   }, []);
 
   useEffect(() => { 
-    // 5秒终极兜底：如果手机卡死不播，5秒后强行进入网页
-    const safetyTimer = setTimeout(() => {
-      triggerClearing();
-    }, 5000); 
-    
+    const safetyTimer = setTimeout(() => { triggerClearing(); }, 5000); 
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
-    return () => { 
-      clearTimeout(safetyTimer); 
-      window.removeEventListener('toggle-navbar', handleToggle); 
-    };
+    return () => { clearTimeout(safetyTimer); window.removeEventListener('toggle-navbar', handleToggle); };
   }, [triggerClearing]);
 
   useEffect(() => {
     let readyTimer: ReturnType<typeof setTimeout> | null = null;
-    
-    if (bootState === 'clearing') {
-      // 等待黑幕渐隐动画播放完毕 (1.2s)，然后彻底清理 DOM
-      readyTimer = setTimeout(() => {
-        setBootState('ready');
-      }, 1200); 
-    }
-
-    return () => { 
-      if(readyTimer) clearTimeout(readyTimer); 
-    };
+    if (bootState === 'clearing') { readyTimer = setTimeout(() => { setBootState('ready'); }, 1200); }
+    return () => { if(readyTimer) clearTimeout(readyTimer); };
   }, [bootState]);
 
   const handleNavClick = (tabId: string) => {
@@ -80,10 +119,7 @@ export default function Page() {
     window.scrollTo({ top: 0, behavior: 'auto' });
 
     if (tabId === 'neural') {
-      setSpiritTarget(tabId);     
-      setPendingTab(tabId);       
-      setActiveTab(tabId);
-      return; 
+      setSpiritTarget(tabId); setPendingTab(tabId); setActiveTab(tabId); return; 
     }
 
     const isStartingFromPage = spiritTarget === null;
@@ -91,23 +127,14 @@ export default function Page() {
     setJumpType(isStartingFromPage ? 'dive' : 'hop');
 
     timers.current.spirit = setTimeout(() => {
-        setIsPreparing(false);      
-        setSpiritTarget(tabId);     
-        setPendingTab(tabId);       
-        
-        timers.current.pageExit = setTimeout(() => {
-            setActiveTab(tabId);
-        }, 50);
+        setIsPreparing(false); setSpiritTarget(tabId); setPendingTab(tabId);       
+        timers.current.pageExit = setTimeout(() => { setActiveTab(tabId); }, 50);
     }, 150); 
 
     timers.current.prepare = setTimeout(() => {
-        setIsPreparing(true); 
-        setJumpType(tabId === 'home' ? 'soar' : 'dive'); 
-
+        setIsPreparing(true); setJumpType(tabId === 'home' ? 'soar' : 'dive'); 
         timers.current.jump = setTimeout(() => {
-            setIsPreparing(false); 
-            setSpiritTarget(null); 
-            setPendingTab(null);   
+            setIsPreparing(false); setSpiritTarget(null); setPendingTab(null);   
         }, 150);
     }, 3150); 
   };
@@ -124,15 +151,10 @@ export default function Page() {
       
       <style dangerouslySetInnerHTML={{__html: `
         html, body { overscroll-behavior: none; background-color: #FDFEFE; }
-        @keyframes ken-burns {
-          0% { transform: scale(1.0) translate(0, 0); }
-          50% { transform: scale(1.1) translate(-1%, -1%); }
-          100% { transform: scale(1.0) translate(0, 0); }
-        }
+        @keyframes ken-burns { 0% { transform: scale(1.0) translate(0, 0); } 50% { transform: scale(1.1) translate(-1%, -1%); } 100% { transform: scale(1.0) translate(0, 0); } }
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      {/* 💥 开场动画层：暗夜破晓 */}
       <AnimatePresence>
         {bootState !== 'ready' && (
           <motion.div
@@ -143,40 +165,15 @@ export default function Page() {
             transition={{ duration: 1.2, ease: [0.32, 0.72, 0, 1] }}
             style={{ willChange: 'opacity' }}
           >
-            <motion.div
-               className="flex flex-col items-center justify-center"
-               initial={{ opacity: 0, scale: 0.95 }}
-               animate={{ opacity: 1, scale: 1 }}
-               transition={{ duration: 0.8, ease: "easeOut" }}
-            >
+            <motion.div className="flex flex-col items-center justify-center" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: "easeOut" }}>
                <div className="relative group">
-                   {/* 黄金径向遮罩，消除视频硬边割裂感 */}
-                   <div 
-                      className="absolute inset-[-10%] sm:inset-[-20%] z-10 pointer-events-none"
-                      style={{
-                          background: "radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 80%)"
-                      }}
-                   />
+                   <div className="absolute inset-[-10%] sm:inset-[-20%] z-10 pointer-events-none" style={{ background: "radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 80%)" }} />
                    <video 
                      ref={videoRef}
-                     src="/start.mp4" 
-                     autoPlay 
-                     muted 
-                     playsInline 
-                     preload="auto"
+                     src="/start.mp4" autoPlay muted playsInline preload="auto"
                      className="w-[260px] sm:w-[320px] h-auto object-contain pointer-events-none relative z-0" 
-                     
-                     // 💥 修复 2：移动端强制点火！
-                     // 只要视频能播放第一帧，就用 JS 强行推它一把。如果被省电模式拦截，直接拉开黑幕进网页，绝生死机！
-                     onCanPlay={() => {
-                        videoRef.current?.play().catch((err) => {
-                           console.warn("移动端阻止自动播放，直接进入首页", err);
-                           triggerClearing();
-                        });
-                     }}
-
-                     onEnded={triggerClearing}
-                     onError={triggerClearing}
+                     onCanPlay={() => { videoRef.current?.play().catch((err) => { triggerClearing(); }); }}
+                     onEnded={triggerClearing} onError={triggerClearing}
                    />
                </div>
             </motion.div>
@@ -184,12 +181,8 @@ export default function Page() {
         )}
       </AnimatePresence>
 
-      {/* 以下是网页主体结构，保持原样 */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#E2E8F0]"> 
-        <div 
-          className="absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
-        />
+        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
         <div className="absolute top-0 inset-x-0 h-[80vh]" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0.4) 40%, transparent 100%)' }} />
         <div className="absolute bottom-0 inset-x-0 h-[20vh] bg-gradient-to-t from-[#CBD5E1]/80 to-transparent" />
       </div>
@@ -199,23 +192,13 @@ export default function Page() {
       <motion.div
         className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        style={{ 
-          rotate: springRotate,
-          pointerEvents: activeTab === 'neural' ? 'none' : 'auto'
-        }} 
+        style={{ rotate: springRotate, pointerEvents: activeTab === 'neural' ? 'none' : 'auto' }} 
         initial={{ opacity: 0, scale: 0.5 }}
-        animate={{
-          opacity: (bootState === 'clearing' || bootState === 'ready') && activeTab !== 'neural' ? 1 : 0,
-          scale: activeTab === 'neural' ? 0.5 : 1
-        }}
-        transition={{ duration: 0.8, delay: 0.4 }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        animate={{ opacity: (bootState === 'clearing' || bootState === 'ready') && activeTab !== 'neural' ? 1 : 0, scale: activeTab === 'neural' ? 0.5 : 1 }}
+        transition={{ duration: 0.8, delay: 0.4 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
       >
         <div className="absolute top-1.5 w-1.5 h-1.5 bg-slate-800 rounded-full shadow-sm opacity-80" />
-        <div className="w-4 h-4 rounded-full border-[2px] border-slate-800/30 flex items-center justify-center">
-           <div className="w-1 h-1 bg-slate-800/60 rounded-full" />
-        </div>
+        <div className="w-4 h-4 rounded-full border-[2px] border-slate-800/30 flex items-center justify-center"><div className="w-1 h-1 bg-slate-800/60 rounded-full" /></div>
       </motion.div>
 
       <motion.main 
@@ -227,54 +210,41 @@ export default function Page() {
         <AnimatePresence mode="wait">
           {activeTab === 'home' && (
           <motion.div 
-            key="home"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10, transition: { duration: 0.15, ease: "easeOut" } }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="w-full flex flex-col items-center"
-            style={{ 
-              willChange: 'transform, opacity',
-              transform: 'translateZ(0)',
-              backfaceVisibility: 'hidden'
-            }}
+            key="home" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10, transition: { duration: 0.15, ease: "easeOut" } }} transition={{ duration: 0.25, ease: "easeOut" }}
+            className="w-full flex flex-col items-center" style={{ willChange: 'transform, opacity', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
           >
                <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
                <motion.div className="w-full flex justify-center mt-2 mb-4 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
-                 <div className="flex flex-col items-center gap-1.5">
-                   <ArrowDown size={14} className="text-slate-500" />
-                 </div>
+                 <div className="flex flex-col items-center gap-1.5"><ArrowDown size={14} className="text-slate-500" /></div>
                </motion.div>
 
                <div className="relative w-full">
                  <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1px] bg-gradient-to-b from-white/0 via-white/40 to-white/0" />
 
-                 {mixedTimeline.map((item, idx) => {
+                 {/* 💥 灵魂替换：把 mixedTimeline 换成从服务器拉取的 timelineData */}
+                 {timelineData.map((item, idx) => {
                     const isLeft = idx % 2 === 0;
                     const stickyTop = `${100 + idx * 12}px`; 
 
                     return (
-                      <div key={idx} className={`w-full flex ${isLeft ? 'justify-start' : 'justify-end'} mb-16 relative`}>
+                      <div key={item.id} className={`w-full flex ${isLeft ? 'justify-start' : 'justify-end'} mb-16 relative`}>
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
                            <motion.div
                                className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
                                style={{ rotate: isLeft ? '-1.5deg' : '1.5deg', isolation: 'isolate' }}
-                               initial={{ opacity: 0, y: 30 }}
-                               whileInView={{ opacity: 1, y: 0 }}
-                               viewport={{ margin: "50px", once: true }} 
-                               transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                               initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ margin: "50px", once: true }} transition={{ type: "spring", stiffness: 200, damping: 20 }}
                              >
                                 <div className="px-5 py-3 border-b border-white/30 bg-white/20 flex items-center gap-2">
-                                  <div className={`w-1.5 h-1.5 rounded-full ${item.type === 'guestbook' ? 'bg-blue-400' : 'bg-slate-800/40'}`} />
+                                  <div className={`w-1.5 h-1.5 rounded-full ${item.type === 'guestbook' ? 'bg-blue-400' : 'bg-emerald-400'}`} />
                                   <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-widest">{item.time}</span>
                                 </div>
 
                                 {item.type === 'thought' ? (
                                    <div className="p-5">
-                                      <p className="text-[13px] font-bold text-slate-800/90 leading-relaxed tracking-wide">{item.text}</p>
+                                      <p className="text-[13px] font-bold text-slate-800/90 leading-relaxed tracking-wide whitespace-pre-wrap">{item.text}</p>
                                    </div>
                                 ) : (
                                    <div className="p-4 flex flex-col gap-3">
@@ -285,6 +255,16 @@ export default function Page() {
                                          <div className="flex-1 bg-white/60 rounded-[16px] rounded-tl-none p-3 shadow-sm border border-white/50">
                                             <div className="text-[10px] font-bold text-slate-400 mb-1">{item.user}</div>
                                             <p className="text-[12px] font-medium text-slate-700 leading-relaxed">{item.message}</p>
+                                            
+                                            {/* 💥 站长回复 UI：如果你在数据库里填了 reply，就会炫酷地展示在这里！ */}
+                                            {item.reply && (
+                                              <div className="mt-2.5 pt-2.5 border-t border-slate-200/60">
+                                                <div className="text-[10px] font-bold text-blue-500 mb-0.5 flex items-center gap-1">
+                                                   Leo Fu <span className="text-[8px] bg-blue-100 px-1 rounded text-blue-600">站长</span>
+                                                </div>
+                                                <p className="text-[11px] font-medium text-slate-600 leading-relaxed">{item.reply}</p>
+                                              </div>
+                                            )}
                                          </div>
                                       </div>
                                    </div>
@@ -299,10 +279,7 @@ export default function Page() {
                     <motion.div 
                       className="group bg-white/60 sm:bg-white/40 sm:backdrop-blur-xl border border-white/60 rounded-[32px] p-6 flex items-center gap-5 cursor-pointer shadow-lg transition-all active:scale-[0.98]"
                       onClick={() => handleNavClick('guestbook')}
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      whileInView={{ scale: 1, opacity: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      initial={{ scale: 0.9, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <div className="w-14 h-14 bg-slate-900 rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
                         <MessageSquare size={24} className="text-white/90" />
@@ -327,23 +304,11 @@ export default function Page() {
       <motion.div 
         className="fixed bottom-10 inset-x-0 flex justify-center z-50"
         initial={{ y: 150, opacity: 0 }}
-        animate={{ 
-          y: (bootState === 'clearing' || bootState === 'ready') && isNavVisible ? 0 : 150, 
-          opacity: (bootState === 'clearing' || bootState === 'ready') && isNavVisible ? 1 : 0 
-        }}
+        animate={{ y: (bootState === 'clearing' || bootState === 'ready') && isNavVisible ? 0 : 150, opacity: (bootState === 'clearing' || bootState === 'ready') && isNavVisible ? 1 : 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 25, delay: 0.3 }}
       >
         <nav className="relative flex items-center p-1 sm:p-1.5 rounded-full">
-          
-          <div 
-             className="absolute inset-0 z-0 rounded-full border border-white/40 pointer-events-none"
-             style={{
-               background: "rgba(255, 255, 255, 0.4)",
-               backdropFilter: "blur(12px) saturate(150%)",
-               boxShadow: "0 20px 40px -12px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.9)"
-             }}
-          />
-
+          <div className="absolute inset-0 z-0 rounded-full border border-white/40 pointer-events-none" style={{ background: "rgba(255, 255, 255, 0.4)", backdropFilter: "blur(12px) saturate(150%)", boxShadow: "0 20px 40px -12px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.9)" }} />
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             const isHighlight = (pendingTab || activeTab) === item.id;
@@ -351,24 +316,10 @@ export default function Page() {
             
             return (
               <button key={item.id} onClick={() => handleNavClick(item.id)} className="relative z-10 flex flex-col items-center justify-center w-[68px] sm:w-20 h-14 rounded-full transition-all cursor-pointer active:scale-95 group">
-                
-                {showSpirit && (
-                   <VoidSpirit isNavigating={true} isPreparing={isPreparing} jumpType={jumpType} locationId={`nav-${item.id}`} />
-                )}
-                
+                {showSpirit && <VoidSpirit isNavigating={true} isPreparing={isPreparing} jumpType={jumpType} locationId={`nav-${item.id}`} />}
                 <item.icon size={20} className={`transition-all duration-300 relative z-10 ${isActive ? 'text-slate-900 scale-110' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                <span className={`text-[9px] sm:text-[10px] mt-1 font-black tracking-tight transition-all uppercase relative z-10 ${isActive ? 'text-slate-900 opacity-100' : 'text-slate-400 opacity-0'}`}>
-                  {item.label}
-                </span>
-                
-                {isHighlight && (
-                  <motion.div 
-                    layoutId="nav-pill" 
-                    transition={{ type: "spring", stiffness: 400, damping: 21, mass: 1 }} 
-                    className="absolute inset-0 z-0 rounded-full"
-                    style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.01) 100%)", boxShadow: "0 1px 2px rgba(255,255,255,0.4)" }}
-                  />
-                )}
+                <span className={`text-[9px] sm:text-[10px] mt-1 font-black tracking-tight transition-all uppercase relative z-10 ${isActive ? 'text-slate-900 opacity-100' : 'text-slate-400 opacity-0'}`}>{item.label}</span>
+                {isHighlight && <motion.div layoutId="nav-pill" transition={{ type: "spring", stiffness: 400, damping: 21, mass: 1 }} className="absolute inset-0 z-0 rounded-full" style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.01) 100%)", boxShadow: "0 1px 2px rgba(255,255,255,0.4)" }} />}
               </button>
             );
           })}
