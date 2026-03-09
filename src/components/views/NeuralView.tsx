@@ -85,36 +85,34 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      initial={{ y: "100%" }} 
-      animate={{ y: 0 }} 
+      initial={{ y: "100%", borderRadius: "40px 40px 0px 0px" }} 
+      animate={{ 
+        y: 0,
+        top: isKeyboardOpen ? "0px" : "10dvh", // 开启全屏，关闭留白
+        borderRadius: isKeyboardOpen ? "0px 0px 0px 0px" : "40px 40px 0px 0px" 
+      }} 
       exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
-      transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
+      transition={{ type: "spring", stiffness: 350, damping: 28 }}
       onPointerMove={handlePointerMove}
       
-      // 💥 修复 2（分离与白缝）：坚如磐石的 absolute 定位！
-      // 底部死死焊在 bottom-0，高度通过 isKeyboardOpen 动态切换全屏或 95%！绝不会被拉断！
-      // 加上 rounded-t-[40px] 静态圆角，抛弃易错的动画渲染。
-      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] rounded-t-[40px] flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.8)]"
+      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.8)]"
       style={{
-        height: isKeyboardOpen ? '100dvh' : '95dvh',
-        willChange: 'transform, height',
+        willChange: 'transform, top, border-radius',
         overflow: 'hidden', 
-        overscrollBehavior: 'none', // 物理阉割 iOS 橡皮筋回弹
-        WebkitMaskImage: '-webkit-radial-gradient(white, black)' // 神级防刺穿：强制开启硬件级圆角裁切！
+        transform: 'translateZ(0)', // 强制硬件加速
+        WebkitMaskImage: '-webkit-radial-gradient(white, black)' // 强行裁切内部越界平头
       }}
     >
-      {/* 彻底铲除 page.tsx 的干扰 */}
+      {/* 隐藏底层首页的白雾 */}
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
           nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }
           .fixed.bottom-0.z-40 { display: none !important; }
-          body { overscroll-behavior: none !important; }
         `}} />
       )}
 
-      {/* 💥 修复 1（真假平头）：彻底删除这个容器的所有 bg-color（背景色）！ */}
-      {/* 让它变成完全透明，它就再也没有能力去遮挡外层的圆角了！ */}
-      <div className="shrink-0 h-[110px] w-full flex justify-center items-center gap-6 relative z-20 pointer-events-none border-b border-white/5 pt-4 bg-transparent">
+      {/* 💥 大眼睛容器：绝对的透明背景 bg-transparent，绝不遮挡外层圆角！ */}
+      <div className="shrink-0 h-[110px] w-full flex justify-center items-center gap-6 relative z-20 border-b border-white/5 pt-4 bg-transparent">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)] translate-z-0">
             <motion.div 
@@ -125,9 +123,9 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
-      {/* 消息滚动区：坚固的独立物理滚动轴 */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 scroll-smooth z-10 scrollbar-hide" style={{ overscrollBehaviorY: 'contain' }}>
-        <div className="flex flex-col space-y-6 pt-4 pb-[160px]">
+      {/* 消息滚动区 */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 z-10 scrollbar-hide" style={{ overscrollBehaviorY: 'contain' }}>
+        <div className="flex flex-col space-y-6 pt-4 pb-[180px]">
           {messages.map((m, i) => (
             <motion.div 
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -157,38 +155,38 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         </div>
       </div>
 
-      {/* 💥 修复 3（白雾遮盖）：我把输入框上方的所有渐变阴影连根拔起！只有纯粹的黑色底座，绝不遮挡文字！ */}
-      <div 
-        className="absolute bottom-0 left-0 w-full transition-all duration-300 z-30 bg-[#0A0A0A]"
-        style={{ 
-          paddingBottom: isKeyboardOpen ? '20px' : '100px', // 完美躲避导航栏，开键盘时无缝贴合
-          paddingTop: '16px' 
-        }}
+      {/* 💥 修复重叠 Bug：彻底物理分离的绝对定位输入框！ */}
+      {/* 没开键盘时，它的 bottom 是 120px，完美高悬于导航栏之上！ */}
+      <motion.div 
+        animate={{ bottom: isKeyboardOpen ? 20 : 120 }}
+        transition={{ type: "spring", stiffness: 350, damping: 28 }}
+        className="absolute inset-x-0 px-6 z-30"
       >
-        <div className="px-6">
-          <div className="p-1 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-            <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
-              <input 
-                ref={inputRef}
-                value={input} 
-                onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
-                onKeyDown={e => e.key === 'Enter' && handleSend()} 
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
-                placeholder="与数字分身对话..." 
-                className="w-full bg-transparent border-none text-white/90 placeholder:text-white/40 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-5 pr-11" 
-              />
-              <button 
-                onClick={handleSend} 
-                disabled={isThinking || !input.trim()} 
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
-              >
-                <Send size={18} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
-              </button>
-            </div>
+        {/* 输入框顶部的黑雾渐变，防止文字穿透 */}
+        <div className="absolute -top-12 inset-x-0 h-12 bg-gradient-to-t from-[#0A0A0A] to-transparent pointer-events-none" />
+        
+        <div className="p-1 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+          <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
+            <input 
+              ref={inputRef}
+              value={input} 
+              onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
+              onKeyDown={e => e.key === 'Enter' && handleSend()} 
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              placeholder="与数字分身对话..." 
+              className="w-full bg-transparent border-none text-white/90 placeholder:text-white/40 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-5 pr-11" 
+            />
+            <button 
+              onClick={handleSend} 
+              disabled={isThinking || !input.trim()} 
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
+            >
+              <Send size={18} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
+            </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 };
