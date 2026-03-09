@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Home, Book, MessageSquare, Sparkles, ArrowDown, User } from 'lucide-react';
 import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
 
@@ -24,16 +24,32 @@ export default function Page() {
   const [isPreparing, setIsPreparing] = useState(false);
   const [jumpType, setJumpType] = useState<'hop' | 'dive' | 'soar'>('hop'); 
   
+  // 开机三段式状态
   const [bootState, setBootState] = useState<'booting' | 'clearing' | 'ready'>('booting');
   const [isNavVisible, setIsNavVisible] = useState(true);
+  
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, spirit: null, pageExit: null });
+  // 💥 拿回丢失的视频控制权！
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const { scrollY } = useScroll();
   const rawRotate = useTransform(scrollY, [0, 2000], [0, 1080]); 
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
+  // 💥 修复 1：单向状态锁，绝不倒流！
+  const triggerClearing = useCallback(() => {
+    setBootState(prev => {
+      // 只有在 booting 状态下，才允许变成 clearing。防止 5秒兜底定时器在网页加载完后捣乱闪黑！
+      if (prev === 'booting') return 'clearing';
+      return prev;
+    });
+  }, []);
+
   useEffect(() => { 
-    const safetyTimer = setTimeout(() => setBootState('clearing'), 5000); 
+    // 5秒终极兜底：如果手机卡死不播，5秒后强行进入网页
+    const safetyTimer = setTimeout(() => {
+      triggerClearing();
+    }, 5000); 
     
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
@@ -41,15 +57,16 @@ export default function Page() {
       clearTimeout(safetyTimer); 
       window.removeEventListener('toggle-navbar', handleToggle); 
     };
-  }, []);
+  }, [triggerClearing]);
 
   useEffect(() => {
     let readyTimer: ReturnType<typeof setTimeout> | null = null;
     
     if (bootState === 'clearing') {
+      // 等待黑幕渐隐动画播放完毕 (1.2s)，然后彻底清理 DOM
       readyTimer = setTimeout(() => {
         setBootState('ready');
-      }, 1500); 
+      }, 1200); 
     }
 
     return () => { 
@@ -115,7 +132,7 @@ export default function Page() {
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
       `}} />
 
-      {/* 开场动画层：暗夜破晓 */}
+      {/* 💥 开场动画层：暗夜破晓 */}
       <AnimatePresence>
         {bootState !== 'ready' && (
           <motion.div
@@ -133,6 +150,7 @@ export default function Page() {
                transition={{ duration: 0.8, ease: "easeOut" }}
             >
                <div className="relative group">
+                   {/* 黄金径向遮罩，消除视频硬边割裂感 */}
                    <div 
                       className="absolute inset-[-10%] sm:inset-[-20%] z-10 pointer-events-none"
                       style={{
@@ -140,13 +158,25 @@ export default function Page() {
                       }}
                    />
                    <video 
+                     ref={videoRef}
                      src="/start.mp4" 
                      autoPlay 
                      muted 
                      playsInline 
+                     preload="auto"
                      className="w-[260px] sm:w-[320px] h-auto object-contain pointer-events-none relative z-0" 
-                     onEnded={() => setBootState('clearing')}
-                     onError={() => setBootState('clearing')}
+                     
+                     // 💥 修复 2：移动端强制点火！
+                     // 只要视频能播放第一帧，就用 JS 强行推它一把。如果被省电模式拦截，直接拉开黑幕进网页，绝生死机！
+                     onCanPlay={() => {
+                        videoRef.current?.play().catch((err) => {
+                           console.warn("移动端阻止自动播放，直接进入首页", err);
+                           triggerClearing();
+                        });
+                     }}
+
+                     onEnded={triggerClearing}
+                     onError={triggerClearing}
                    />
                </div>
             </motion.div>
@@ -154,6 +184,7 @@ export default function Page() {
         )}
       </AnimatePresence>
 
+      {/* 以下是网页主体结构，保持原样 */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#E2E8F0]"> 
         <div 
           className="absolute inset-0 opacity-[0.04]"
