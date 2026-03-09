@@ -45,7 +45,7 @@ export default function Page() {
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
     window.scrollTo({ top: 0, behavior: 'auto' });
 
-    // 💥 加上这段：如果是切到 AI 页，直接秒进，绝不等待！
+    // 💥 加上这四行：切到 AI 页时直接强行显示，干掉所有动画延迟！
     if (tabId === 'neural') {
       setSpiritTarget(tabId);     
       setPendingTab(tabId);       

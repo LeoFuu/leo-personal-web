@@ -83,24 +83,26 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: "100%", top: 24, borderTopLeftRadius: 40, borderTopRightRadius: 40 }} 
+      // 💥 性能优化 1：彻底废除消耗 CPU 的 `top` 动画！
+      // 用初始 `y: "100%"` 配合最终的 `y: 24`（代表向下平移 24px），实现与 `top: 24` 一模一样的视觉效果，但完全不掉帧！
+      initial={{ opacity: 0, y: "100%", borderRadius: "40px" }} 
       animate={{ 
         opacity: 1, 
-        y: 0,
-        top: isKeyboardOpen ? 0 : 24,
-        borderTopLeftRadius: isKeyboardOpen ? 0 : 40,
-        borderTopRightRadius: isKeyboardOpen ? 0 : 40
+        y: isKeyboardOpen ? 0 : 24, // 键盘关：整体下移 24px 露出顶部白边；键盘开：回到底部 0 吸顶！
+        borderRadius: isKeyboardOpen ? "0px" : "40px"
       }} 
       exit={{ opacity: 0, y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden"
+      
+      // 💥 性能优化 2：把外层容器的高度强制拉长到 h-[100dvh] 外加底部冗余 bottom-[-24px]！
+      // 因为容器在关闭键盘时会下移 24px，为了保证底部不穿帮，我们把它做长一点。
+      className="fixed inset-x-0 top-0 bottom-[-24px] mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden"
       style={{
-        willChange: 'transform, opacity, top, border-radius',
+        willChange: 'transform, opacity, border-radius', // 只让 GPU 处理这三个属性！
         transform: 'translateZ(0)',
         borderTop: '1px solid rgba(255,255,255,0.05)',
         overscrollBehavior: 'none',
-        // 💥 神级防护：强制开启 iOS 的 GPU 级别圆角裁切！
         WebkitMaskImage: '-webkit-radial-gradient(white, black)'
       }}
     >
@@ -112,8 +114,8 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         `}} />
       )}
 
-      {/* 💥 终极修复：去掉了 bg-[#0A0A0A]！它现在是透明的，绝对不可能再遮挡父级的圆角！ */}
-      <div className="absolute top-0 inset-x-0 h-[110px] flex justify-center items-center gap-6 z-20 pointer-events-none border-b border-white/5 pt-6 pb-2">
+      {/* 头部大眼睛：完全保留你这版的透明逻辑，绝不会有平头Bug */}
+      <div className="absolute top-0 inset-x-0 h-[110px] flex justify-center items-center gap-6 z-20 pointer-events-none border-b border-white/5 pt-6 pb-2 bg-transparent">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)] translate-z-0">
             <motion.div 
@@ -162,9 +164,11 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         </div>
       </div>
 
+      {/* 💥 性能优化 3：因为外层整个下移了 24px，所以输入框的底部 padding 也要加上 24px 补偿！ */}
       <div 
-        className="absolute inset-x-0 bottom-0 bg-[#0A0A0A] z-30 transition-all duration-300"
-        style={{ paddingBottom: isKeyboardOpen ? '16px' : '110px', paddingTop: '12px' }}
+        className="absolute inset-x-0 bottom-[24px] bg-[#0A0A0A] z-30 transition-all duration-300"
+        // 没开键盘时，原始 110px 加上下移的 24px = 134px。这样视觉上它绝对没有移动过任何位置！
+        style={{ paddingBottom: isKeyboardOpen ? '16px' : '134px', paddingTop: '12px' }}
       >
         <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pointer-events-none" />
         
