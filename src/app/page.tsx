@@ -24,11 +24,8 @@ export default function Page() {
   const [isPreparing, setIsPreparing] = useState(false);
   const [jumpType, setJumpType] = useState<'hop' | 'dive' | 'soar'>('hop'); 
   
-  // 💥 定义的三段式开机状态
   const [bootState, setBootState] = useState<'booting' | 'clearing' | 'ready'>('booting');
-  
   const [isNavVisible, setIsNavVisible] = useState(true);
-
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, spirit: null, pageExit: null });
 
   const { scrollY } = useScroll();
@@ -36,18 +33,29 @@ export default function Page() {
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
   useEffect(() => { 
-    // 💥 完美控制时间轴
-    const t1 = setTimeout(() => setBootState('clearing'), 1000); // 给名字展示预留1秒
-    const t2 = setTimeout(() => setBootState('ready'), 2200);
+    const safetyTimer = setTimeout(() => setBootState('clearing'), 5000); 
     
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
     return () => { 
-      clearTimeout(t1); 
-      clearTimeout(t2); 
+      clearTimeout(safetyTimer); 
       window.removeEventListener('toggle-navbar', handleToggle); 
     };
   }, []);
+
+  useEffect(() => {
+    let readyTimer: ReturnType<typeof setTimeout> | null = null;
+    
+    if (bootState === 'clearing') {
+      readyTimer = setTimeout(() => {
+        setBootState('ready');
+      }, 1500); 
+    }
+
+    return () => { 
+      if(readyTimer) clearTimeout(readyTimer); 
+    };
+  }, [bootState]);
 
   const handleNavClick = (tabId: string) => {
     if (tabId === activeTab || pendingTab === tabId) return;
@@ -105,62 +113,47 @@ export default function Page() {
           100% { transform: scale(1.0) translate(0, 0); }
         }
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
-        
-        /* 💥 Flicker 进场效果 */
-        @keyframes flicker {
-           0% { opacity: 0.1; }
-           5% { opacity: 0.7; }
-           10% { opacity: 0.2; }
-           15% { opacity: 0.9; }
-           20% { opacity: 0.3; }
-           25% { opacity: 1; }
-        }
-        .animate-flicker { animation: flicker 0.4s ease-out; }
       `}} />
 
-      {/* 💥 晨雾破晓”全屏开机动画遮罩 */}
+      {/* 开场动画层：暗夜破晓 */}
       <AnimatePresence>
         {bootState !== 'ready' && (
           <motion.div
-            className="fixed inset-0 z-[99999] bg-[#FDFEFE]/50 backdrop-blur-[40px] flex items-center justify-center pointer-events-none"
+            className="fixed inset-0 z-[99999] bg-black flex items-center justify-center pointer-events-none"
             initial={{ opacity: 1 }}
             animate={{ opacity: bootState === 'clearing' ? 0 : 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.2, ease: [0.32, 0.72, 0, 1] }}
             style={{ willChange: 'opacity' }}
           >
-            {/* 💥 任务改动：名字全息呼吸进场 */}
             <motion.div
-               className="flex flex-col items-center gap-1.5 animate-flicker"
-               initial={{ scale: 0.9, opacity: 0.2 }}
-               animate={
-                 bootState === 'booting' 
-                   ? { scale: [0.98, 1.02, 0.98], opacity: [0.6, 1, 0.6] } 
-                   : { scale: 1.1, opacity: 0, y: -10 }
-               }
-               transition={{
-                 duration: bootState === 'booting' ? 2.5 : 0.6,
-                 repeat: bootState === 'booting' ? Infinity : 0,
-                 ease: "easeInOut",
-                 delay: 0.1 // 稍微延迟一下 Flicker 闪烁开始的时间
-               }}
+               className="flex flex-col items-center justify-center"
+               initial={{ opacity: 0, scale: 0.95 }}
+               animate={{ opacity: 1, scale: 1 }}
+               transition={{ duration: 0.8, ease: "easeOut" }}
             >
-               {/* 付昱淋 */}
-               <h1 className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight leading-none">付昱淋</h1>
-               
-               {/* Leo Fu */}
-               <div className="flex items-center gap-2 text-slate-400">
-                  <div className="w-5 h-[1px] bg-slate-300" />
-                  <span className="text-[11px] font-mono font-extrabold uppercase tracking-widest leading-none">Leo Fu / 个人开发</span>
-                  <div className="w-5 h-[1px] bg-slate-300" />
+               <div className="relative group">
+                   <div 
+                      className="absolute inset-[-10%] sm:inset-[-20%] z-10 pointer-events-none"
+                      style={{
+                          background: "radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 80%)"
+                      }}
+                   />
+                   <video 
+                     src="/start.mp4" 
+                     autoPlay 
+                     muted 
+                     playsInline 
+                     className="w-[260px] sm:w-[320px] h-auto object-contain pointer-events-none relative z-0" 
+                     onEnded={() => setBootState('clearing')}
+                     onError={() => setBootState('clearing')}
+                   />
                </div>
-
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* 以下代码维持不变... */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#E2E8F0]"> 
         <div 
           className="absolute inset-0 opacity-[0.04]"
@@ -203,18 +196,18 @@ export default function Page() {
         <AnimatePresence mode="wait">
           {activeTab === 'home' && (
           <motion.div 
-          key="home"
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10, transition: { duration: 0.15, ease: "easeOut" } }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="w-full flex flex-col items-center"
-          style={{ 
-            willChange: 'transform, opacity',
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden'
-          }}
-       >
+            key="home"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10, transition: { duration: 0.15, ease: "easeOut" } }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="w-full flex flex-col items-center"
+            style={{ 
+              willChange: 'transform, opacity',
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden'
+            }}
+          >
                <HomeView showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />
                
                <motion.div className="w-full flex justify-center mt-2 mb-4 opacity-40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
