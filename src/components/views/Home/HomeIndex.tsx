@@ -5,6 +5,7 @@ import { MetalClipBack, MetalClipFront } from './MetalClip';
 import { IDCard } from './IDCard';
 import { ProjectDeck } from './ProjectDeck';
 import { ProjectModal } from './ProjectModal';
+import { ProfileModal } from './ProfileModal'; // 💥 引入刚刚写的名片弹窗
 
 export interface HomeProps {
   showSpiritHere: boolean;
@@ -18,12 +19,14 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
   const [bumpCount, setBumpCount] = useState(0);
   
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  // 💥 增加一个控制个人名片弹窗的状态
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const clipControls = useAnimationControls();
   const idCardControls = useAnimationControls(); 
 
   const handleNextCard = async () => {
-    if (isAnimating || selectedProjectId !== null) return;
+    if (isAnimating || selectedProjectId !== null || showProfileModal) return;
     setIsAnimating(true);
 
     clipControls.start({ rotate: -25, x: -5, y: -5, transition: { duration: 0.08, ease: 'easeOut' } });
@@ -44,8 +47,10 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
   return (
     <>
       <ProjectModal projectId={selectedProjectId} onClose={() => setSelectedProjectId(null)} />
+      
+      {/* 💥 挂载个人名片弹窗 */}
+      <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
 
-      {/* 💥 神级物理入场：由于它内部没有 Sticky 元素，在这里加弹簧绝对不会卡顿！ */}
       <motion.div 
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -54,7 +59,15 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
       >
         <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
           <MetalClipBack />
-          <IDCard controls={idCardControls} showSpiritHere={showSpiritHere} isPreparing={isPreparing} jumpType={jumpType} bumpCount={bumpCount} />
+          {/* 💥 传入 onOpenProfile 事件，点击名片时打开弹窗 */}
+          <IDCard 
+            controls={idCardControls} 
+            showSpiritHere={showSpiritHere} 
+            isPreparing={isPreparing} 
+            jumpType={jumpType} 
+            bumpCount={bumpCount} 
+            onOpenProfile={() => setShowProfileModal(true)}
+          />
           <MetalClipFront controls={clipControls} />
           <ProjectDeck deck={deck} onOpenDetail={setSelectedProjectId} />
         </div>

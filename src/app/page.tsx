@@ -23,7 +23,9 @@ export default function Page() {
   const [spiritTarget, setSpiritTarget] = useState<string | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
   const [jumpType, setJumpType] = useState<'hop' | 'dive' | 'soar'>('hop'); 
-  const [isLoaded, setIsLoaded] = useState(false);
+  
+  // 💥 定义的三段式开机状态
+  const [bootState, setBootState] = useState<'booting' | 'clearing' | 'ready'>('booting');
   
   const [isNavVisible, setIsNavVisible] = useState(true);
 
@@ -34,10 +36,17 @@ export default function Page() {
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
   useEffect(() => { 
-    setTimeout(() => setIsLoaded(true), 50);
+    // 💥 完美控制时间轴
+    const t1 = setTimeout(() => setBootState('clearing'), 1000); // 给名字展示预留1秒
+    const t2 = setTimeout(() => setBootState('ready'), 2200);
+    
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
-    return () => window.removeEventListener('toggle-navbar', handleToggle);
+    return () => { 
+      clearTimeout(t1); 
+      clearTimeout(t2); 
+      window.removeEventListener('toggle-navbar', handleToggle); 
+    };
   }, []);
 
   const handleNavClick = (tabId: string) => {
@@ -45,7 +54,6 @@ export default function Page() {
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
     window.scrollTo({ top: 0, behavior: 'auto' });
 
-    // 💥 加上这四行：切到 AI 页时直接强行显示，干掉所有动画延迟！
     if (tabId === 'neural') {
       setSpiritTarget(tabId);     
       setPendingTab(tabId);       
@@ -97,8 +105,62 @@ export default function Page() {
           100% { transform: scale(1.0) translate(0, 0); }
         }
         .animate-ken-burns { animation: ken-burns 25s infinite ease-in-out; }
+        
+        /* 💥 Flicker 进场效果 */
+        @keyframes flicker {
+           0% { opacity: 0.1; }
+           5% { opacity: 0.7; }
+           10% { opacity: 0.2; }
+           15% { opacity: 0.9; }
+           20% { opacity: 0.3; }
+           25% { opacity: 1; }
+        }
+        .animate-flicker { animation: flicker 0.4s ease-out; }
       `}} />
 
+      {/* 💥 晨雾破晓”全屏开机动画遮罩 */}
+      <AnimatePresence>
+        {bootState !== 'ready' && (
+          <motion.div
+            className="fixed inset-0 z-[99999] bg-[#FDFEFE]/50 backdrop-blur-[40px] flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: bootState === 'clearing' ? 0 : 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, ease: [0.32, 0.72, 0, 1] }}
+            style={{ willChange: 'opacity' }}
+          >
+            {/* 💥 任务改动：名字全息呼吸进场 */}
+            <motion.div
+               className="flex flex-col items-center gap-1.5 animate-flicker"
+               initial={{ scale: 0.9, opacity: 0.2 }}
+               animate={
+                 bootState === 'booting' 
+                   ? { scale: [0.98, 1.02, 0.98], opacity: [0.6, 1, 0.6] } 
+                   : { scale: 1.1, opacity: 0, y: -10 }
+               }
+               transition={{
+                 duration: bootState === 'booting' ? 2.5 : 0.6,
+                 repeat: bootState === 'booting' ? Infinity : 0,
+                 ease: "easeInOut",
+                 delay: 0.1 // 稍微延迟一下 Flicker 闪烁开始的时间
+               }}
+            >
+               {/* 付昱淋 */}
+               <h1 className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight leading-none">付昱淋</h1>
+               
+               {/* Leo Fu */}
+               <div className="flex items-center gap-2 text-slate-400">
+                  <div className="w-5 h-[1px] bg-slate-300" />
+                  <span className="text-[11px] font-mono font-extrabold uppercase tracking-widest leading-none">Leo Fu / 个人开发</span>
+                  <div className="w-5 h-[1px] bg-slate-300" />
+               </div>
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 以下代码维持不变... */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#E2E8F0]"> 
         <div 
           className="absolute inset-0 opacity-[0.04]"
@@ -110,20 +172,19 @@ export default function Page() {
 
       <div className="fixed bottom-0 inset-x-0 h-40 bg-gradient-to-t from-[#CBD5E1] via-[#CBD5E1]/80 to-transparent pointer-events-none z-40" />
 
-      {/* 💥 发条悬浮钮：在 AI 页面智能隐身！ */}
       <motion.div
         className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden group"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         style={{ 
           rotate: springRotate,
-          // 切到 AI 页时禁用点击
           pointerEvents: activeTab === 'neural' ? 'none' : 'auto'
         }} 
+        initial={{ opacity: 0, scale: 0.5 }}
         animate={{
-          // 切到 AI 页时，缩小并变透明
-          opacity: activeTab === 'neural' ? 0 : 1,
+          opacity: (bootState === 'clearing' || bootState === 'ready') && activeTab !== 'neural' ? 1 : 0,
           scale: activeTab === 'neural' ? 0.5 : 1
         }}
+        transition={{ duration: 0.8, delay: 0.4 }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
       >
@@ -134,12 +195,11 @@ export default function Page() {
       </motion.div>
 
       <motion.main 
-        initial={{ opacity: 0, y: 15 }}
-        animate={isLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        initial={{ opacity: 0, y: 40, scale: 0.96 }}
+        animate={bootState === 'clearing' || bootState === 'ready' ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 40, scale: 0.96 }}
+        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
         className="relative z-10 max-w-xl mx-auto w-full px-5 pb-32 pt-10 flex-1"
       >
-        {/* 💥 核心修复 1：改回最稳妥的 mode="wait"。只要每个页面的 exit 够快，就不会有任何卡顿，彻底干掉主线程假死！ */}
         <AnimatePresence mode="wait">
           {activeTab === 'home' && (
           <motion.div 
@@ -149,8 +209,6 @@ export default function Page() {
           exit={{ opacity: 0, y: -10, transition: { duration: 0.15, ease: "easeOut" } }}
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="w-full flex flex-col items-center"
-          // 💥 给整个首页容器开启最高级别的 GPU 硬件加速！
-          // 防止进出场时复杂的子元素（卡牌、模糊）压垮主线程
           style={{ 
             willChange: 'transform, opacity',
             transform: 'translateZ(0)',
@@ -177,8 +235,6 @@ export default function Page() {
                          <div className={`absolute top-1/2 -translate-y-1/2 ${isLeft ? 'right-[50%] w-[15%]' : 'left-[50%] w-[15%]'} h-[1px] bg-white/30 hidden sm:block`} />
                          
                          <div className="sticky z-20" style={{ top: stickyTop }}>
-                           {/* 💥 核心修复 2：把底下长长的时间轴全部改回 whileInView！
-                               不让它们在切回首页的瞬间堆积渲染，彻底释放浏览器算力！ */}
                            <motion.div
                                className="w-[240px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] rounded-[24px] border border-white/50 bg-white/70 sm:bg-white/40 backdrop-blur-none sm:backdrop-blur-lg overflow-hidden flex flex-col"
                                style={{ rotate: isLeft ? '-1.5deg' : '1.5deg', isolation: 'isolate' }}
@@ -246,9 +302,12 @@ export default function Page() {
 
       <motion.div 
         className="fixed bottom-10 inset-x-0 flex justify-center z-50"
-        initial={{ y: 0, opacity: 1 }}
-        animate={{ y: isNavVisible ? 0 : 150, opacity: isNavVisible ? 1 : 0 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+        initial={{ y: 150, opacity: 0 }}
+        animate={{ 
+          y: (bootState === 'clearing' || bootState === 'ready') && isNavVisible ? 0 : 150, 
+          opacity: (bootState === 'clearing' || bootState === 'ready') && isNavVisible ? 1 : 0 
+        }}
+        transition={{ type: 'spring', stiffness: 350, damping: 25, delay: 0.3 }}
       >
         <nav className="relative flex items-center p-1 sm:p-1.5 rounded-full">
           
