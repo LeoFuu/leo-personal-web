@@ -139,7 +139,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ projectId, onClose }
             {/* 💥 恢复正常的 p-6 高度，无需妥协！ */}
             <div className="shrink-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-200 flex gap-4">
               <button className="flex-1 py-4 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg shadow-black/20">
-                <ExternalLink size={16} /> Dowload 
+                <ExternalLink size={16} /> Visit Site
               </button>
               <button className="w-14 h-14 shrink-0 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-transform active:scale-95">
                 <Github size={20} />

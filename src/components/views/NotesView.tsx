@@ -87,7 +87,7 @@ export const NotesView = () => {
         {isLoading && (
           <div className="py-20 flex flex-col items-center text-slate-400 gap-3">
              <Loader2 size={24} className="animate-spin opacity-50" />
-             <span className="text-[12px] font-bold tracking-widest uppercase">Fetching Archives...</span>
+             <span className="text-[12px] font-bold tracking-widest uppercase">加载动画还没做...</span>
           </div>
         )}
 

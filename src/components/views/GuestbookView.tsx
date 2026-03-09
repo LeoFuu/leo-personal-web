@@ -132,7 +132,7 @@ export const GuestbookView = () => {
           {isLoading ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center py-10 text-slate-400 gap-2">
               <Loader2 size={20} className="animate-spin opacity-50" />
-              <span className="text-[10px] font-bold tracking-widest uppercase">Syncing...</span>
+              <span className="text-[10px] font-bold tracking-widest uppercase">加载动画还没做...</span>
             </motion.div>
           ) : messages.length === 0 ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-10 text-[13px] font-medium text-slate-400">
