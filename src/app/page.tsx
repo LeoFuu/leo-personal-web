@@ -43,15 +43,14 @@ export default function Page() {
   const handleNavClick = (tabId: string) => {
     if (tabId === activeTab || pendingTab === tabId) return;
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
-    
     window.scrollTo({ top: 0, behavior: 'auto' });
 
-    // 💥 极速通道：如果是切到 AI 页，直接秒进！不要让小精灵在底下“蓄力跳跃”浪费时间！
+    // 💥 加上这段：如果是切到 AI 页，直接秒进，绝不等待！
     if (tabId === 'neural') {
       setSpiritTarget(tabId);     
       setPendingTab(tabId);       
       setActiveTab(tabId);
-      return;
+      return; 
     }
 
     const isStartingFromPage = spiritTarget === null;
