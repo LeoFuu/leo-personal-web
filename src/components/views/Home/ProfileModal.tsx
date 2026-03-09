@@ -1,10 +1,11 @@
 // src/components/views/Home/ProfileModal.tsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Github, ChevronRight, MapPin } from 'lucide-react';
 import { HolographicAvatar } from '../../ui/HolographicAvatar';
 
-// 💥 换回原版 1024x1024 双气泡微信
+// 💥 纯净版：原版 1024x1024 双气泡微信 (已清理所有非法幽灵空格)
 const WeChatIcon = ({ size = 18, className = "" }) => (
   <svg viewBox="0 0 1024 1024" width={size} height={size} className={`fill-current ${className}`}>
     <path d="M682.666667 362.666667c-17.066667 0-38.4 2.133333-55.466667 4.266666C590.933333 211.2 443.733333 91.733333 268.8 91.733333 119.466667 91.733333 0 196.266667 0 324.266667c0 74.666667 38.4 140.8 98.133333 183.466666-6.4 23.466667-21.333333 51.2-21.333333 51.2s-4.266667 14.933334 10.666667 4.266667c17.066667-12.8 51.2-34.133333 51.2-34.133333 21.333333 6.4 46.933333 8.533333 72.533333 8.533333 6.4 0 14.933333 0 21.333333-2.133333C241.066667 618.666667 334.933333 672 443.733333 672c21.333333 0 42.666667-2.133333 64-4.266667 21.333333 34.133333 68.266667 61.866667 119.466667 61.866667 17.066667 0 34.133333-2.133333 46.933333-6.4 0 0 25.6 14.933333 38.4 23.466667 10.666667 8.533333 8.533333-2.133333 8.533333-2.133333s-10.666667-21.333333-14.933333-38.4c42.666667-29.866667 68.266667-74.666667 68.266667-123.733334C774.4 465.066667 682.666667 362.666667 682.666667 362.666667z M192 256c23.466667 0 42.666667 19.2 42.666667 42.666667S215.466667 341.333333 192 341.333333s-42.666667-19.2-42.666667-42.666666 19.2-42.666667 42.666667-42.666667z m149.333333 85.333333c-23.466667 0-42.666667-19.2-42.666667-42.666666S317.866667 256 341.333333 256s42.666667 19.2 42.666667 42.666667-19.2 42.666667-42.666667 42.666667z m149.333334 162.133334c-14.933333 0-25.6-10.666667-25.6-25.6s10.666667-25.6 25.6-25.6 25.6 10.666667 25.6 25.6-10.666667 25.6-25.6 25.6z m128 0c-14.933333 0-25.6-10.666667-25.6-25.6s10.666667-25.6 25.6-25.6 25.6 10.666667 25.6 25.6-12.8 25.6-25.6 25.6z"/>
@@ -29,11 +30,19 @@ interface ProfileModalProps {
 }
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
-  return (
+  // 💥 Portal 必须等待客户端渲染完成才能获取 document.body
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // 这是我们原本的弹窗结构
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-5"
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-5"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -111,6 +120,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
       )}
     </AnimatePresence>
   );
+
+  // 💥 终极魔法：如果在服务器端渲染，返回 null；
+  // 如果在客户端渲染，将其"传送"到 document.body 的最外层！打破一切 CSS Transform 诅咒！
+  if (!mounted) return null;
+  return createPortal(modalContent, document.body);
 };
 
 const SocialRow = ({ icon, title, desc, iconBg, iconColor }: { icon: React.ReactNode, title: string, desc: string, iconBg: string, iconColor: string }) => (
