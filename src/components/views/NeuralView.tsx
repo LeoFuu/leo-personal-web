@@ -83,38 +83,36 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 💥 修复 1（平头 Bug）：将圆角拆分为具体的数字属性！Framer Motion 瞬间完美解析，出场绝对圆润！
-      initial={{ opacity: 0, y: "100%", top: 24, borderTopLeftRadius: 40, borderTopRightRadius: 40 }} 
+      initial={{ opacity: 0, y: "100%" }} 
+      // 💥 终极防弹圆角：直接用标准字符串替代容易出错的数字，完全杜绝平头 Bug！
       animate={{ 
         opacity: 1, 
         y: 0,
-        top: isKeyboardOpen ? 0 : 24,
-        borderTopLeftRadius: isKeyboardOpen ? 0 : 40,
-        borderTopRightRadius: isKeyboardOpen ? 0 : 40
+        top: isKeyboardOpen ? "0px" : "24px",
+        borderRadius: isKeyboardOpen ? "0px 0px 0px 0px" : "40px 40px 0px 0px"
       }} 
       exit={{ opacity: 0, y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
       
-      // 放弃 flex，只做最坚固的 fixed 容器
-      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden"
+      // 💥 加上了 rounded-t-[40px] 作为 CSS 底层保障，它出场的一瞬间必定是圆润的！
+      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden rounded-t-[40px]"
       style={{
         willChange: 'transform, opacity, top, border-radius',
         transform: 'translateZ(0)',
         borderTop: '1px solid rgba(255,255,255,0.05)',
-        overscrollBehavior: 'none' // 防止自身回弹
+        overscrollBehavior: 'none'
       }}
     >
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
           nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }
           .fixed.bottom-0.z-40 { display: none !important; }
-          /* 💥 修复 3（白缝 Bug）：强制锁死 iOS 的全局橡皮筋回弹！ */
           body { overscroll-behavior: none !important; }
         `}} />
       )}
 
-      {/* 顶部大眼睛：绝对定位在顶部 */}
+      {/* 顶部大眼睛 */}
       <div className="absolute top-0 inset-x-0 h-[110px] flex justify-center items-center gap-6 z-20 pointer-events-none bg-[#0A0A0A] border-b border-white/5 pt-6 pb-2">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)] translate-z-0">
@@ -126,13 +124,13 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
-      {/* 消息滚动区：夹在中间，动态计算底部距离避开输入框 */}
+      {/* 消息滚动区 */}
       <div 
         className="absolute inset-x-0 overflow-y-auto px-4 sm:px-6 scrollbar-hide scroll-smooth z-10"
         style={{
           top: '110px',
-          bottom: isKeyboardOpen ? '80px' : '170px', // 精准留出空间，文字绝对不会被挡
-          overscrollBehaviorY: 'contain' // 确保只在内部滚动，不引发外层滑动
+          bottom: isKeyboardOpen ? '80px' : '170px',
+          overscrollBehaviorY: 'contain' 
         }}
       >
         <div className="flex flex-col space-y-6 pt-4 pb-6">
@@ -165,12 +163,11 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         </div>
       </div>
 
-      {/* 💥 修复 2（防分离分离）：输入框采用绝对定位 absolute bottom-0，焊死在容器最底部！ */}
+      {/* 底部悬浮输入框 */}
       <div 
         className="absolute inset-x-0 bottom-0 bg-[#0A0A0A] z-30 transition-all duration-300"
         style={{ paddingBottom: isKeyboardOpen ? '16px' : '110px', paddingTop: '12px' }}
       >
-        {/* 输入框顶部的黑雾渐变，让滚动的文字优雅隐形 */}
         <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pointer-events-none" />
         
         <div className="px-6 sm:px-10">
@@ -197,7 +194,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
           </div>
         </div>
       </div>
-
     </motion.div>
   );
 };
