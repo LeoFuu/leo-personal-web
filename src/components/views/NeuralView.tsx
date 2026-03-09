@@ -86,19 +86,24 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   return (
     <motion.div 
       initial={{ y: "100%" }} 
-      // 💥 致命修复：将 "5dvh" 改为 "5%"，Framer Motion 瞬间复活，不再罢工！
-      animate={{ y: isKeyboardOpen ? 0 : "5%" }} 
+      animate={{ y: 0 }} 
       exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] rounded-t-[40px] flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.8)] h-[100dvh]"
+      
+      // 💥 修复 2（分离与白缝）：坚如磐石的 absolute 定位！
+      // 底部死死焊在 bottom-0，高度通过 isKeyboardOpen 动态切换全屏或 95%！绝不会被拉断！
+      // 加上 rounded-t-[40px] 静态圆角，抛弃易错的动画渲染。
+      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] rounded-t-[40px] flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.8)]"
       style={{
-        willChange: 'transform',
+        height: isKeyboardOpen ? '100dvh' : '95dvh',
+        willChange: 'transform, height',
         overflow: 'hidden', 
-        overscrollBehavior: 'none', 
-        WebkitMaskImage: '-webkit-radial-gradient(white, black)' 
+        overscrollBehavior: 'none', // 物理阉割 iOS 橡皮筋回弹
+        WebkitMaskImage: '-webkit-radial-gradient(white, black)' // 神级防刺穿：强制开启硬件级圆角裁切！
       }}
     >
+      {/* 彻底铲除 page.tsx 的干扰 */}
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
           nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }
@@ -107,6 +112,8 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         `}} />
       )}
 
+      {/* 💥 修复 1（真假平头）：彻底删除这个容器的所有 bg-color（背景色）！ */}
+      {/* 让它变成完全透明，它就再也没有能力去遮挡外层的圆角了！ */}
       <div className="shrink-0 h-[110px] w-full flex justify-center items-center gap-6 relative z-20 pointer-events-none border-b border-white/5 pt-4 bg-transparent">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)] translate-z-0">
@@ -118,9 +125,9 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
+      {/* 消息滚动区：坚固的独立物理滚动轴 */}
       <div className="flex-1 min-h-0 overflow-y-auto px-5 scroll-smooth z-10 scrollbar-hide" style={{ overscrollBehaviorY: 'contain' }}>
-        {/* CSS 中使用 calc(160px + 5dvh) 是完全合法的，因为是浏览器渲染引擎在计算 */}
-        <div className="flex flex-col space-y-6 pt-4 pb-[calc(160px+5dvh)]">
+        <div className="flex flex-col space-y-6 pt-4 pb-[160px]">
           {messages.map((m, i) => (
             <motion.div 
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -150,15 +157,14 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         </div>
       </div>
 
+      {/* 💥 修复 3（白雾遮盖）：我把输入框上方的所有渐变阴影连根拔起！只有纯粹的黑色底座，绝不遮挡文字！ */}
       <div 
         className="absolute bottom-0 left-0 w-full transition-all duration-300 z-30 bg-[#0A0A0A]"
         style={{ 
-          paddingBottom: isKeyboardOpen ? '20px' : 'calc(100px + 5dvh)', 
+          paddingBottom: isKeyboardOpen ? '20px' : '100px', // 完美躲避导航栏，开键盘时无缝贴合
           paddingTop: '16px' 
         }}
       >
-        <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pointer-events-none" />
-        
         <div className="px-6">
           <div className="p-1 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
