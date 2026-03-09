@@ -86,17 +86,14 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   return (
     <motion.div 
       initial={{ y: "100%" }} 
-      // 💥 性能核弹：不再改写 height！直接用 y 平移 5dvh 完美复刻你之前的 95dvh！
-      // 关闭时向下平移 5dvh，上方自然留出 5dvh 空白；打开时瞬间归 0 吸顶！绝对丝滑！
-      animate={{ y: isKeyboardOpen ? 0 : "5dvh" }} 
+      // 💥 致命修复：将 "5dvh" 改为 "5%"，Framer Motion 瞬间复活，不再罢工！
+      animate={{ y: isKeyboardOpen ? 0 : "5%" }} 
       exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      
-      // 💥 锁定高度为 h-[100dvh]，彻底消灭页面重绘掉帧！
       className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] rounded-t-[40px] flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.8)] h-[100dvh]"
       style={{
-        willChange: 'transform', // 只让显卡处理 transform，不碰 height
+        willChange: 'transform',
         overflow: 'hidden', 
         overscrollBehavior: 'none', 
         WebkitMaskImage: '-webkit-radial-gradient(white, black)' 
@@ -122,7 +119,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 scroll-smooth z-10 scrollbar-hide" style={{ overscrollBehaviorY: 'contain' }}>
-        {/* 稍微增加底部空白，防止高度改变后最后一条消息被挡住 */}
+        {/* CSS 中使用 calc(160px + 5dvh) 是完全合法的，因为是浏览器渲染引擎在计算 */}
         <div className="flex flex-col space-y-6 pt-4 pb-[calc(160px+5dvh)]">
           {messages.map((m, i) => (
             <motion.div 
@@ -156,11 +153,12 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
       <div 
         className="absolute bottom-0 left-0 w-full transition-all duration-300 z-30 bg-[#0A0A0A]"
         style={{ 
-          // 💥 极度丝滑补偿：因为整个外层下降了 5dvh，这里增加 5dvh padding 保证输入框死死锁定在原位，不多一毫米！
           paddingBottom: isKeyboardOpen ? '20px' : 'calc(100px + 5dvh)', 
           paddingTop: '16px' 
         }}
       >
+        <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pointer-events-none" />
+        
         <div className="px-6">
           <div className="p-1 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
