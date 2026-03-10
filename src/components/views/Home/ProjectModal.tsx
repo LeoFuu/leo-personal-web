@@ -120,10 +120,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ projectId, onClose }
               </div>
 
               <div className="prose prose-sm prose-slate max-w-none">
-                <p className="text-sm font-medium text-slate-600 leading-relaxed mb-6">
-                  {project.description}
-                  第一次写爬虫工具，发布到谷歌插件商店审核中
-                </p>
+                {/* 💥 修改这里：读取 detail，并且支持换行排版！ */}
+                <div className="text-sm font-medium text-slate-600 leading-relaxed mb-6 whitespace-pre-wrap">
+                  {project.detail || project.description}
+                </div>
 
                 <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-3">Core Tech Stack</h3>
                 <div className="flex flex-wrap gap-2 mb-8">

@@ -4,8 +4,6 @@ import { motion } from 'framer-motion';
 import { Heart, ArrowUpRight, Image as ImageIcon } from 'lucide-react';
 import { projects } from '../../../config/site';
 
-const CARD_COLORS = ['bg-[#D9F99D]', 'bg-[#E9D5FF]', 'bg-[#BAE6FD]'];
-const TEXT_COLORS = ['text-[#3F6212]', 'text-[#6B21A8]', 'text-[#0369A1]'];
 
 export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDetail: (id: number) => void }) => (
   <>
@@ -36,7 +34,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
            className={`absolute inset-0 rounded-[48px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] p-6 flex flex-col border border-white/40 overflow-hidden group`}
          >
-            <div className={`absolute inset-0 ${CARD_COLORS[id]} z-[-1] pointer-events-none`} />
+            <div className={`absolute inset-0 ${project.bgClass || 'bg-slate-200'} z-[-1] pointer-events-none`} />
 
             <div className="absolute inset-0 overflow-hidden rounded-[48px] pointer-events-none z-0">
                <div className="absolute -bottom-6 -right-6 text-[180px] text-black/5 font-black tracking-tighter select-none">
@@ -80,7 +78,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                        )}
                     </div>
                     <div className="flex-1 min-w-0">
-                       <h2 className={`text-[20px] font-black ${TEXT_COLORS[id]} leading-[1.1] mb-1 tracking-tight line-clamp-2`}>
+                       <h2 className={`text-[20px] font-black ${project.textClass || 'text-slate-800'} leading-[1.1] mb-1 tracking-tight line-clamp-2`}>
                           {project?.title || "Upcoming"}
                        </h2>
                        <p className="text-[9px] font-bold text-black/40 uppercase tracking-widest truncate">
@@ -94,7 +92,7 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                  <div className="flex items-center gap-2 pt-1">
                     <button 
                        onClick={(e) => { e.stopPropagation(); onOpenDetail(id); }}
-                       className={`flex-1 py-2.5 rounded-full bg-white hover:bg-gray-50 border border-white/60 shadow-md ${TEXT_COLORS[id]} text-[10px] font-black uppercase tracking-widest transition-all active:scale-95`}
+                       className={`flex-1 py-2.5 rounded-full bg-white hover:bg-gray-50 border border-white/60 shadow-md ${project.textClass || 'text-slate-800'} text-[10px] font-black uppercase tracking-widest transition-all active:scale-95`}
                     >
                        View Detail
                     </button>

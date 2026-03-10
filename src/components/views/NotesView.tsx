@@ -1,6 +1,6 @@
 // src/components/views/NotesView.tsx
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom'; // 💥 引入传送门
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -27,16 +27,14 @@ export const NotesView = () => {
   const [notesData, setNotesData] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false); // 💥 用于确保客户端渲染
+  const [mounted, setMounted] = useState(false);
   
   const springConfig = { type: "spring" as const, stiffness: 400, damping: 25, mass: 1 };
 
-  // 1. 确保组件挂载后再启用传送门
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 2. 💥 联动隐藏导航栏：当笔记展开时，让底部导航栏让路！
   useEffect(() => {
     const nav = document.getElementById('global-navbar');
     if (!nav) return;
@@ -54,7 +52,6 @@ export const NotesView = () => {
     }
   }, [selectedId]);
 
-  // 3. 拉取数据
   useEffect(() => {
     const fetchNotes = async () => {
       try {
@@ -131,9 +128,11 @@ export const NotesView = () => {
               >
                 <div className="w-full rounded-[32px] p-6 sm:p-8 bg-white/95 sm:bg-white/90 backdrop-blur-xl border border-white/60 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] flex flex-col min-h-[160px] overflow-hidden relative group">
                   <div className="absolute -top-10 -right-10 w-32 h-32 bg-slate-100 rounded-full blur-2xl opacity-60 group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
-                  <div className="relative z-10 flex-1">
-                    <motion.h3 layoutId={`title-${note.id}`} className="text-[22px] font-black text-slate-800 leading-tight tracking-tight mb-3">{note.title}</motion.h3>
-                    <p className="text-[14px] font-medium text-slate-500 leading-relaxed line-clamp-2 mb-2">{note.content}</p>
+                  <div className="relative z-10 flex-1 flex flex-col">
+                    {/* 💥 修改：给卡片的标题加上了 text-center 居中对齐 */}
+                    <motion.h3 layoutId={`title-${note.id}`} className="text-[22px] font-black text-slate-800 leading-tight tracking-tight mb-3 text-center">{note.title}</motion.h3>
+                    {/* 💥 修改：列表摘要的文字加上 indent-[2em] 实现首行缩进 */}
+                    <p className="text-[14px] font-medium text-slate-500 leading-relaxed line-clamp-2 mb-2 indent-[2em]">{note.content}</p>
                   </div>
                   <div className="relative z-10 flex justify-end mt-auto pt-2">
                     <span className="text-[11px] font-bold text-slate-400/60 tracking-wider">{note.date}</span>
@@ -145,7 +144,6 @@ export const NotesView = () => {
         </div>
       </motion.div>
 
-      {/* 💥 重点重构：空间传送！将展开的模态框传送到 body，彻底摆脱父组件 transform 的干扰 */}
       {mounted && createPortal(
         <AnimatePresence>
           {selectedId && (
@@ -162,7 +160,6 @@ export const NotesView = () => {
                 const activeNote = notesData.find(n => n.id === selectedId);
                 if (!activeNote) return null;
                 return (
-                  // z-[99999] 保证它在最最最顶层，超越一切！
                   <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
                     <motion.div
                       layoutId={`card-container-${activeNote.id}`}
@@ -174,17 +171,28 @@ export const NotesView = () => {
                       drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.2}
                       onDragEnd={(e, { offset, velocity }) => { if (offset.y > 100 || velocity.y > 500) setSelectedId(null); }}
                     >
-                      {/* 顶部关闭按钮区 */}
-                      <div className="p-6 sm:p-8 flex justify-end items-center relative z-10 border-b border-slate-100/50 bg-white/80">
-                         <button onClick={() => setSelectedId(null)} className="w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-200 flex items-center justify-center transition-colors active:scale-95 shadow-sm border border-slate-200">
+                      {/* 💥 修改1：去掉了这里的 border-b，改为绝对定位悬浮关闭按钮，消除“隔断感” */}
+                      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50">
+                         <button onClick={() => setSelectedId(null)} className="w-9 h-9 rounded-full bg-slate-100/60 backdrop-blur hover:bg-slate-200 flex items-center justify-center transition-colors active:scale-95 shadow-sm border border-slate-200/50">
                            <X size={16} className="text-slate-600" />
                          </button>
                       </div>
                       
                       {/* 滚动内容区 */}
-                      <div className="p-6 sm:p-10 flex-1 flex flex-col overflow-y-auto relative z-10 scrollbar-hide">
-                         <motion.h3 layoutId={`title-${activeNote.id}`} className="text-2xl sm:text-3xl font-black text-slate-800 leading-tight tracking-tight mb-6">{activeNote.title}</motion.h3>
-                         <div className="text-[15px] sm:text-[16px] font-medium text-slate-600 leading-loose whitespace-pre-wrap flex-1">{activeNote.content}</div>
+                      {/* 💥 修改2：加大了顶部 padding (pt-16) 来避开悬浮按钮 */}
+                      <div className="p-6 pt-16 sm:p-10 sm:pt-20 flex-1 flex flex-col overflow-y-auto relative z-10 scrollbar-hide">
+                         {/* 💥 修改3：标题加上 text-center 居中对齐 */}
+                         <motion.h3 layoutId={`title-${activeNote.id}`} className="text-2xl sm:text-3xl font-black text-slate-800 leading-tight tracking-tight mb-8 text-center">{activeNote.title}</motion.h3>
+                         
+                         <div className="text-[15px] sm:text-[16px] font-medium text-slate-600 leading-loose flex-1">
+                           {/* 💥 核心修改：把一整坨文本按照换行符 \n 劈开，给每一段独立加上 indent-[2em]（首行缩进两字符） */}
+                           {activeNote.content.split('\n').map((paragraph, index) => (
+                             <p key={index} className="indent-[2em] mb-4 min-h-[1.5em]">
+                               {paragraph}
+                             </p>
+                           ))}
+                         </div>
+                         
                          <div className="mt-8 pt-6 border-t border-slate-100/50 flex justify-end">
                            <span className="text-[12px] font-bold text-slate-400/60 tracking-wider">{activeNote.date}</span>
                          </div>
