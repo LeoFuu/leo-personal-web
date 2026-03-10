@@ -94,6 +94,8 @@ export async function POST(req: Request) {
       tools: [{ googleSearch: {} }] 
     };
 
+    // ... 前面的代码不变 ...
+
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -104,8 +106,11 @@ export async function POST(req: Request) {
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "信号丢失，似乎碰到了引力波...";
     
     return NextResponse.json({ reply });
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI API Error:", error);
-    return NextResponse.json({ error: "神经连接不稳定，请检查网络。" }, { status: 500 });
+    // 💥 强行把底层的真实报错原因丢给前端，显示在你的手机屏幕上！
+    return NextResponse.json({ 
+      error: `API崩溃: ${error.message || '未知网络错误'} (请检查梯子是否开启了TUN模式，且节点绝对不能是香港！请切换到美国/日本/新加坡节点)` 
+    }, { status: 500 });
   }
 }

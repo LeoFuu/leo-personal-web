@@ -106,7 +106,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         transform: 'translateZ(0)',
         borderTop: '1px solid rgba(255,255,255,0.05)',
         overscrollBehavior: 'none'
-        // 💥 修复 1：彻底删除了引发手机 GPU 闪烁白块的 WebkitMaskImage 属性！
       }}
     >
       {isPresent && (
@@ -151,8 +150,8 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
                 )}
               </div>
               <div className="max-w-[78%]">
-                {/* 💥 给聊天气泡加上 translateZ(0)，强制 GPU 独立分层渲染，彻底断绝任何重绘闪烁的可能！ */}
-                <div className="px-4 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)]" style={{ transform: 'translateZ(0)' }}>
+                {/* 💥 撤销了 translateZ(0)，彻底消除 GPU 渲染碎块的可能 */}
+                <div className="px-4 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
                   <p className="text-[14px] leading-relaxed font-medium text-white/90 whitespace-pre-wrap break-words">{m.text}</p>
                 </div>
               </div>
@@ -162,12 +161,12 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
           {isThinking && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3 w-full flex-row">
               <div className="shrink-0 mt-1"><div className="w-9 h-9 rounded-full border border-white/20 overflow-hidden bg-slate-900 opacity-50 animate-pulse shadow-md"><img src={MY_AVATAR} alt="Clone" className="w-full h-full object-cover" /></div></div>
-              <div className="max-w-[75%]"><div className="px-5 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl flex items-center gap-2" style={{ transform: 'translateZ(0)' }}><span className="text-[12px] font-mono text-white/50 animate-pulse">让我想想...</span></div></div>
+              <div className="max-w-[75%]"><div className="px-5 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl flex items-center gap-2"><span className="text-[12px] font-mono text-white/50 animate-pulse">让我想想...</span></div></div>
             </motion.div>
           )}
 
-          {/* 💥 修复 2：将撑开底部的占位符从 h-2 加大到 h-28！强行把最后一条消息往上顶，完美避开黑色渐变遮挡！ */}
-          <div ref={scrollRef} className="h-28 shrink-0 w-full" />
+          {/* 💥 修复 1：将超长的 h-28 缩减回最舒适的 h-16！ */}
+          <div ref={scrollRef} className="h-16 shrink-0 w-full" />
         </div>
       </div>
 
@@ -192,6 +191,8 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
               />
               <button 
                 onClick={handleSend} 
+                // 💥 修复 2：拦截点击事件！防止点击发送按钮时输入法被强行收回导致闪屏！
+                onPointerDown={(e) => e.preventDefault()} 
                 disabled={isThinking || !input.trim()} 
                 className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
               >
