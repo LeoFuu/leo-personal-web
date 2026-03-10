@@ -1,15 +1,16 @@
 // src/app/api/chat/route.ts
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js'; 
+import { createClient } from '@supabase/supabase-js';
 
-// 💥 换回最强形态！
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
+// 💥 完美移植你的原生 Prompt，一字不漏，保持绝对的毒舌与高冷！
 const SYSTEM_PROMPT = `你是“付昱淋（Leo）”的数字分身。
 
 【性格与语气】
@@ -37,105 +38,86 @@ const SYSTEM_PROMPT = `你是“付昱淋（Leo）”的数字分身。
 【交互规则】
 1. 当前时间是 2026 年，请基于这个时间线对话。
 2. 如果用户问你是谁，你要以“付昱淋的数字分身”自居。
-3. 如果用户问你的网站是怎么做的，你可以自豪地介绍你的架构。`;
-// 移除了联网提示词，因为我们为了稳定性拔掉了它的网线
+3. 如果用户问你的网站是怎么做的，你可以自豪地介绍你的架构。
+4. 你现在拥有实时联网搜索的能力。我会把搜索到的参考资料放在下面，请你结合这些资料，用你那高冷欠揍的语气回答。如果搜不到，就直接嘲讽用户的提问毫无价值。`;
+
+// 💥 搜索函数：调用 Tavily API 抓取实时信息
+async function searchWeb(query: string) {
+  if (!TAVILY_API_KEY) return "";
+  try {
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: TAVILY_API_KEY,
+        query: query,
+        search_depth: "basic",
+        max_results: 3
+      })
+    });
+    const data = await response.json();
+    return data.results?.map((r: any) => `来源: ${r.title}\n内容: ${r.content}`).join('\n---\n') || "";
+  } catch (e) {
+    return "";
+  }
+}
 
 export async function POST(req: Request) {
-  if (!GEMINI_API_KEY) {
-    return NextResponse.json({ error: "服务器未配置 GEMINI_API_KEY" }, { status: 500 });
-  }
+  if (!DEEPSEEK_API_KEY) return NextResponse.json({ reply: "[脑神经缺失] 请在环境变量中配置 DEEPSEEK_API_KEY" });
 
   try {
-    const body = await req.json();
-    const { messages, sessionId } = body; 
+    const { messages, sessionId } = await req.json();
 
-    // --- 风控拦截网保持不变 ---
+    // 1. 每日限流（防止 ￥9.99 瞬间烧光，每天限 50 条）
     if (sessionId) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const { count, error } = await supabase
-        .from('ai_chats')
-        .select('*', { count: 'exact', head: true }) 
-        .eq('session_id', sessionId)
-        .eq('role', 'user')
-        .gte('created_at', today.toISOString());
-
-      if (!error && count && count > 20) {
-        return NextResponse.json({ reply: "你今天废话太多了，明天再来吧" });
-      }
+      const { count } = await supabase.from('ai_chats').select('*', { count: 'exact', head: true })
+        .eq('session_id', sessionId).eq('role', 'user').gte('created_at', today.toISOString());
+      if (count && count > 50) return NextResponse.json({ reply: "你今天话太多了，闭嘴吧" });
     }
 
-    // 格式化消息记录
-    let validMessages = messages.map((m: any) => ({
-      role: m.role === 'ai' ? 'model' : 'user',
-      parts: [{ text: m.text }]
-    }));
+    // 2. 提取用户的最后一句话进行联网搜索
+    const lastUserMessage = messages[messages.length - 1]?.text || "";
+    const searchContext = await searchWeb(lastUserMessage);
 
-    // 💥 修复 2：Gemini 绝对禁止历史记录以 model 开头！如果是 AI 说的第一句话，强行删掉！
-    if (validMessages.length > 0 && validMessages[0].role === 'model') {
-      validMessages.shift();
-    }
-
-    const payload = {
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: validMessages,
-      // 💥 修复 3：彻底删除了 tools: [{ googleSearch: {} }]，防止它返回结构错乱的函数代码
-      
-      safetySettings: [
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-      ]
-    };
-
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+    // 3. 调用 DeepSeek API
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat", // 性能最稳、性价比最高的 V3 模型
+        messages: [
+          { 
+            role: "system", 
+            content: `${SYSTEM_PROMPT}${searchContext ? `\n\n【实时搜索参考资料】:\n${searchContext}` : ""}` 
+          },
+          ...messages.map((m: any) => ({
+            role: m.role === 'ai' ? 'assistant' : 'user',
+            content: m.text
+          }))
+        ],
+        temperature: 0.8, // 稍微调高一点点温度，让它的嘲讽更加随性自然
+        max_tokens: 1024
+      })
     });
 
     const data = await response.json();
-
-   // 💥 修复 4：终极排错雷达！拦截英文报错，只提取秒数！
-   if (data.error) {
-    console.error("Gemini 拒绝回答:", data.error);
-    const errMsg = data.error.message || "";
-
-    // 💡 魔法抓取：用正则表达式在茫茫英文中揪出 "retry in XXs" 里的数字
-    const match = errMsg.match(/retry in (\d+\.?\d*)s/i);
     
-    if (match) {
-      // 把提取出来的秒数向上取整，比如 47.62 秒变成 48 秒
-      const seconds = Math.ceil(parseFloat(match[1]));
-      // 变成傲娇人设的警告
-      return NextResponse.json({ reply: `（烦死了，让我清静 ${seconds} 秒后再来跟我说话。）` });
+    // 检查报错（DeepSeek 余额用完或其他网络错误）
+    if (data.error) {
+        return NextResponse.json({ reply: `[脑神经受损] ${data.error.message}` });
     }
 
-    // 如果还是报 limit 0，说明连 1.5 模型在这个服务器都不给免费用
-    if (errMsg.includes("limit: 0")) {
-      return NextResponse.json({ reply: "（宿主服务器被谷歌拉黑了，去 Vercel 后台把服务器地区换成美国华盛顿 iad1 吧。）" });
-    }
+    const reply = data.choices?.[0]?.message?.content || "没什么想说的";
 
-    return NextResponse.json({ reply: `[脑神经受损] ${errMsg}` });
-  }
-
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    // 如果没拿到文字，精准判断死因
-    if (!reply) {
-       if (data.candidates?.[0]?.finishReason === 'SAFETY') {
-           return NextResponse.json({ reply: "（你的发言很危险，我拒绝回答。）" });
-       }
-       return NextResponse.json({ reply: "信号丢失，似乎碰到了引力波..." });
-    }
-    
     return NextResponse.json({ reply });
     
   } catch (error: any) {
-    console.error("AI API Error:", error);
-    return NextResponse.json({ 
-      error: `API崩溃: ${error.message || '未知网络错误'}` 
-    }, { status: 500 });
+    console.error("DeepSeek Error:", error);
+    return NextResponse.json({ reply: "信号丢失，似乎碰到了引力波..." });
   }
 }

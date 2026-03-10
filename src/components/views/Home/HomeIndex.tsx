@@ -210,7 +210,7 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
         {/* 底线：宇宙的尽头 */}
         {!hasMore && timelineData.length > 0 && (
           <div className="w-full flex justify-center py-10 opacity-40">
-            <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><Sparkles size={12} /> 宇宙的尽头 <Sparkles size={12} /></span>
+            <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><Sparkles size={12} /> 到达人类最深处 <Sparkles size={12} /></span>
           </div>
         )}
 
