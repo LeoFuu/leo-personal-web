@@ -69,12 +69,24 @@ export default function Page() {
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
     window.scrollTo({ top: 0, behavior: 'auto' });
 
-    // 💥 状态机 1：跳转到 AI 页（Neural）
-    // 逻辑：小精灵直接消失（拔掉 target），瞬间切换页面，绝不拖泥带水！
+   // 💥 状态机 1：跳转到 AI 页（Neural）
+    // 逻辑：先让小精灵朝着 AI 图标起跳，但在半空中（100毫秒时）瞬间切页，并把它抹除！
     if (tabId === 'neural') {
-      setSpiritTarget(null); 
-      setPendingTab(tabId); 
-      setActiveTab(tabId); 
+      setIsPreparing(true);
+      setJumpType('dive'); // 采用向下俯冲的姿势
+
+      timers.current.spirit = setTimeout(() => {
+          setIsPreparing(false); 
+          setSpiritTarget(tabId); // 发射！小精灵开始飞向底部导航栏
+          setPendingTab(tabId);       
+          
+          // 💥 核心魔法：100ms 后页面切换。
+          timers.current.pageExit = setTimeout(() => { 
+            setActiveTab(tabId); 
+            // 💥 终极修复：就是加了这一句！页面切过去的同时，把导航栏上的小精灵目标清空，让它瞬间“湮灭”！
+            setSpiritTarget(null); 
+          }, 100); 
+      }, 150); 
       return; 
     }
 
@@ -111,7 +123,7 @@ export default function Page() {
               setSpiritTarget(null); // 设为 null，把渲染权交接给 HomeView，实现飞入名片！
               setPendingTab(null);   
           }, 150);
-      }, 500); //  关键修复：把原本漫长拖沓的 3150ms 缩短到 500ms！极限清爽！
+      }, 1000); //  关键修复：把原本漫长拖沓的 3150ms 缩短到 500ms！极限清爽！
     }
   };
 

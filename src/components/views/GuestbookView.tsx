@@ -163,7 +163,7 @@ export const GuestbookView = () => {
             </motion.div>
           ) : messages.length === 0 ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-10 text-[13px] font-medium text-slate-400">
-              这里还是一片荒芜，快来留下第一行代码。
+              这里还是一片荒芜，快来留下点什么
             </motion.div>
           ) : (
             messages.map((msg, index) => (

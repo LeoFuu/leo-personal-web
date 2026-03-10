@@ -147,7 +147,7 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
       </motion.div>
 
       {/* 过渡动画：向下滚动指示器 */}
-      <motion.div className="w-full flex justify-center mt-6 mb-12 opacity-40 z-10" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
+      <motion.div className="w-full flex justify-center mt-4 mb-8 opacity-40 z-10" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
         <ArrowDown size={14} className="text-slate-500" />
       </motion.div>
 

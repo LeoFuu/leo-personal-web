@@ -29,7 +29,7 @@ export const useSpiritAnimation = (isPreparing: boolean, locationId: string, jum
 
   const getJumpParams = () => {
     switch(jumpType) {
-      case 'dive': return { y: -220, duration: 0.6, ease: "circOut", times: [0, 0.4, 1] }; 
+      case 'dive': return { y: -100, duration: 0.6, ease: "circOut", times: [0, 0.4, 1] }; 
       case 'soar': return { y: -60, duration: 0.5, ease: "easeOut", times: [0, 0.45, 1] };   
       default: return { y: -40, duration: 0.3, ease: "circOut", times: [0, 0.5, 1] };  
     }
