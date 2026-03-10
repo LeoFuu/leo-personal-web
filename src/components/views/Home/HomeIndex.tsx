@@ -173,7 +173,13 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
                   </div>
 
                   {item.type === 'thought' ? (
-                    <div className="p-5"><p className="text-[13px] font-bold text-slate-800/90 whitespace-pre-wrap">{item.text}</p></div>
+                    // 💥 改动这里：加了 flex 居中、最小高度、文字居中和更舒服的行高
+                    // 💥 取消了统一的 p-6，改为 px-6 pt-2 pb-8，利用不对称的内边距把文字往上托！
+                  <div className="px-6 pt-2 pb-8 flex-1 flex items-center justify-center min-h-[90px]">
+                      <p className="text-[14px] leading-relaxed font-bold text-slate-800/90 whitespace-pre-wrap text-center">
+                        {item.text}
+                      </p>
+                    </div>
                   ) : (
                     <div className="p-4 flex flex-col gap-3">
                       <div className="flex gap-3 items-start">
