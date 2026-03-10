@@ -30,6 +30,10 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     const msg = input; 
     setInput('');
     
+    // 💥 修复 1：发送完消息后，强制输入法失去焦点并收起！
+    inputRef.current?.blur();
+    setIsKeyboardOpen(false);
+    
     const newMessages = [...messages, { role: 'user', text: msg }];
     setMessages(newMessages); 
     setIsThinking(true);
@@ -44,6 +48,15 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
     supabase.from('ai_chats').insert([{ session_id: sessionId, role: 'ai', content: res }]).then();
   };
+
+  // 💥 修复 2：把我不小心删掉的自动滚动代码加回来！
+  useEffect(() => {
+    // 稍微延迟 50ms，等 React 把新的 DOM 渲染完毕后再滚到底部，无比丝滑
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [messages, isThinking]); // 只要消息变多，或者开始思考，就自动往下滚
 
   useEffect(() => {
     let currentSession = localStorage.getItem('visitor_session_id');
@@ -91,22 +104,15 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: "100%", borderRadius: "40px" }} 
-      animate={{ 
-        opacity: 1, 
-        y: isKeyboardOpen ? 0 : 24, 
-        borderRadius: isKeyboardOpen ? "0px" : "40px"
-      }} 
+      initial={{ opacity: 0, y: "100%" }} 
+      // 💥 修复 3：彻底抛弃 y 和 borderRadius 随键盘的变化！让它像磐石一样固定，杜绝一切手机 GPU 渲染撕裂和闪白块！
+      animate={{ opacity: 1, y: 0 }} 
       exit={{ opacity: 0, y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      className="fixed inset-x-0 top-0 bottom-[-24px] mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden"
-      style={{
-        willChange: 'transform, opacity, border-radius', 
-        transform: 'translateZ(0)',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        overscrollBehavior: 'none'
-      }}
+      // 💥 修复 4：改为 fixed inset-0 满屏锁定，并且去掉了会让浏览器崩溃的 willChange 属性
+      className="fixed inset-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] overflow-hidden rounded-t-[32px] sm:rounded-none"
+      style={{ borderTop: '1px solid rgba(255,255,255,0.05)', overscrollBehavior: 'none' }}
     >
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
@@ -130,11 +136,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
       <div 
         className="absolute inset-x-0 overflow-y-auto px-4 sm:px-6 scrollbar-hide scroll-smooth z-10"
-        style={{
-          top: '110px',
-          bottom: isKeyboardOpen ? '80px' : '170px', 
-          overscrollBehaviorY: 'contain' 
-        }}
+        style={{ top: '110px', bottom: '85px', overscrollBehaviorY: 'contain' }}
       >
         <div className="flex flex-col space-y-6 pt-4 pb-6">
           {messages.map((m, i) => (
@@ -150,7 +152,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
                 )}
               </div>
               <div className="max-w-[78%]">
-                {/* 💥 撤销了 translateZ(0)，彻底消除 GPU 渲染碎块的可能 */}
                 <div className="px-4 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
                   <p className="text-[14px] leading-relaxed font-medium text-white/90 whitespace-pre-wrap break-words">{m.text}</p>
                 </div>
@@ -165,15 +166,13 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
             </motion.div>
           )}
 
-          {/* 💥 修复 1：将超长的 h-28 缩减回最舒适的 h-16！ */}
-          <div ref={scrollRef} className="h-16 shrink-0 w-full" />
+          {/* 底部安全占位符 */}
+          <div ref={scrollRef} className="h-6 shrink-0 w-full" />
         </div>
       </div>
 
-      <div 
-        className="absolute inset-x-0 bottom-[24px] bg-[#0A0A0A] z-30 transition-all duration-300"
-        style={{ paddingBottom: isKeyboardOpen ? '16px' : '134px', paddingTop: '12px' }}
-      >
+      {/* 底部的输入框，去掉乱七八糟的高度补偿，让浏览器本身接管输入法的收缩 */}
+      <div className="absolute inset-x-0 bottom-0 bg-[#0A0A0A] z-30 transition-all duration-300 pb-safe" style={{ paddingBottom: isKeyboardOpen ? '12px' : '24px', paddingTop: '12px' }}>
         <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pointer-events-none" />
         
         <div className="px-6 sm:px-10">
@@ -191,8 +190,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
               />
               <button 
                 onClick={handleSend} 
-                // 💥 修复 2：拦截点击事件！防止点击发送按钮时输入法被强行收回导致闪屏！
-                onPointerDown={(e) => e.preventDefault()} 
+                // 去掉了 e.preventDefault()，允许它正常失去焦点
                 disabled={isThinking || !input.trim()} 
                 className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
               >
