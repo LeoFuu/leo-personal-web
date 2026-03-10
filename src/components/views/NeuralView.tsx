@@ -9,7 +9,6 @@ const MY_AVATAR = "/cartoonf.png";
 
 export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [messages, setMessages] = useState([{ role: 'ai', text: "我是付昱淋的数字分身" }]);
-  // 💥 状态：保存当前访客的唯一 ID
   const [sessionId, setSessionId] = useState<string>('');
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -31,46 +30,38 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     const msg = input; 
     setInput('');
     
-    // 1. 更新前端界面
     const newMessages = [...messages, { role: 'user', text: msg }];
     setMessages(newMessages); 
     setIsThinking(true);
     mouseX.set(0); mouseY.set(0); 
     
-    // 💥 2. 把用户说的话存入 Supabase！（异步存，不阻塞 UI）
     supabase.from('ai_chats').insert([{ session_id: sessionId, role: 'user', content: msg }]).then();
     
-    // 💥 3. 呼叫大模型，并把 sessionId 递过去！
     const res = await callAI(newMessages, sessionId);
     
     setIsThinking(false);
     setMessages(p => [...p, { role: 'ai', text: res }]);
 
-    // 💥 4. 把 AI 的回复存入 Supabase！
     supabase.from('ai_chats').insert([{ session_id: sessionId, role: 'ai', content: res }]).then();
   };
 
   useEffect(() => {
-    // 检查这个用户以前来过没
     let currentSession = localStorage.getItem('visitor_session_id');
     if (!currentSession) {
-      // 没来过？当场发个身份证！(生成一个随机字符串)
       currentSession = 'visitor_' + Math.random().toString(36).substring(2, 15);
       localStorage.setItem('visitor_session_id', currentSession);
     }
     setSessionId(currentSession);
 
-    // 💥 读取历史记录的逻辑升级：直接去 Supabase 拉取！
     const fetchHistory = async () => {
       if (!currentSession) return;
       const { data } = await supabase
         .from('ai_chats')
         .select('*')
         .eq('session_id', currentSession)
-        .order('created_at', { ascending: true }); // 按时间正序排，旧的在上面
+        .order('created_at', { ascending: true }); 
       
       if (data && data.length > 0) {
-        // 把数据库的格式转换成我们组件需要的格式
         const dbMessages = data.map(msg => ({ role: msg.role, text: msg.content }));
         setMessages(dbMessages);
       }
@@ -100,27 +91,22 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 💥 性能优化 1：彻底废除消耗 CPU 的 `top` 动画！
-      // 用初始 `y: "100%"` 配合最终的 `y: 24`（代表向下平移 24px），实现与 `top: 24` 一模一样的视觉效果，但完全不掉帧！
       initial={{ opacity: 0, y: "100%", borderRadius: "40px" }} 
       animate={{ 
         opacity: 1, 
-        y: isKeyboardOpen ? 0 : 24, // 键盘关：整体下移 24px 露出顶部白边；键盘开：回到底部 0 吸顶！
+        y: isKeyboardOpen ? 0 : 24, 
         borderRadius: isKeyboardOpen ? "0px" : "40px"
       }} 
       exit={{ opacity: 0, y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      
-      // 💥 性能优化 2：把外层容器的高度强制拉长到 h-[100dvh] 外加底部冗余 bottom-[-24px]！
-      // 因为容器在关闭键盘时会下移 24px，为了保证底部不穿帮，我们把它做长一点。
       className="fixed inset-x-0 top-0 bottom-[-24px] mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden"
       style={{
-        willChange: 'transform, opacity, border-radius', // 只让 GPU 处理这三个属性！
+        willChange: 'transform, opacity, border-radius', 
         transform: 'translateZ(0)',
         borderTop: '1px solid rgba(255,255,255,0.05)',
-        overscrollBehavior: 'none',
-        WebkitMaskImage: '-webkit-radial-gradient(white, black)'
+        overscrollBehavior: 'none'
+        // 💥 修复 1：彻底删除了引发手机 GPU 闪烁白块的 WebkitMaskImage 属性！
       }}
     >
       {isPresent && (
@@ -131,7 +117,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         `}} />
       )}
 
-      {/* 头部大眼睛：完全保留你这版的透明逻辑，绝不会有平头Bug */}
+      {/* 头部大眼睛 */}
       <div className="absolute top-0 inset-x-0 h-[110px] flex justify-center items-center gap-6 z-20 pointer-events-none border-b border-white/5 pt-6 pb-2 bg-transparent">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)] translate-z-0">
@@ -165,26 +151,28 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
                 )}
               </div>
               <div className="max-w-[78%]">
-                <div className="px-4 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
+                {/* 💥 给聊天气泡加上 translateZ(0)，强制 GPU 独立分层渲染，彻底断绝任何重绘闪烁的可能！ */}
+                <div className="px-4 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)]" style={{ transform: 'translateZ(0)' }}>
                   <p className="text-[14px] leading-relaxed font-medium text-white/90 whitespace-pre-wrap break-words">{m.text}</p>
                 </div>
               </div>
             </motion.div>
           ))}
+          
           {isThinking && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3 w-full flex-row">
               <div className="shrink-0 mt-1"><div className="w-9 h-9 rounded-full border border-white/20 overflow-hidden bg-slate-900 opacity-50 animate-pulse shadow-md"><img src={MY_AVATAR} alt="Clone" className="w-full h-full object-cover" /></div></div>
-              <div className="max-w-[75%]"><div className="px-5 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl flex items-center gap-2"><span className="text-[12px] font-mono text-white/50 animate-pulse">让我想想...</span></div></div>
+              <div className="max-w-[75%]"><div className="px-5 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl flex items-center gap-2" style={{ transform: 'translateZ(0)' }}><span className="text-[12px] font-mono text-white/50 animate-pulse">让我想想...</span></div></div>
             </motion.div>
           )}
-          <div ref={scrollRef} className="h-2 shrink-0" />
+
+          {/* 💥 修复 2：将撑开底部的占位符从 h-2 加大到 h-28！强行把最后一条消息往上顶，完美避开黑色渐变遮挡！ */}
+          <div ref={scrollRef} className="h-28 shrink-0 w-full" />
         </div>
       </div>
 
-      {/* 💥 性能优化 3：因为外层整个下移了 24px，所以输入框的底部 padding 也要加上 24px 补偿！ */}
       <div 
         className="absolute inset-x-0 bottom-[24px] bg-[#0A0A0A] z-30 transition-all duration-300"
-        // 没开键盘时，原始 110px 加上下移的 24px = 134px。这样视觉上它绝对没有移动过任何位置！
         style={{ paddingBottom: isKeyboardOpen ? '16px' : '134px', paddingTop: '12px' }}
       >
         <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pointer-events-none" />

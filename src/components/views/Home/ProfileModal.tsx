@@ -105,12 +105,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             <div className="pt-4 space-y-2 relative">
                <SocialRow 
                  icon={<WeChatIcon size={20} className="translate-x-[1.5px] translate-y-[1.5px]" />} 
-                 title="WeChat" desc="扫描二维码添加好友" iconBg="bg-[#07C160]/10" iconColor="text-[#07C160]" 
+                 title="WeChat" desc="有好的想法欢迎与我交流" iconBg="bg-[#07C160]/10" iconColor="text-[#07C160]" 
                  onClick={() => setShowWeChatQR(true)} // 💥 点击显示微信二维码
                />
                <SocialRow 
                  icon={<DouyinIcon size={16} />} 
-                 title="Douyin" desc="日常灵感与数字生活" iconBg="bg-slate-900/5" iconColor="text-slate-800" 
+                 title="Douyin" desc="日常灵感与数字生活/在想要不要再开个号" iconBg="bg-slate-900/5" iconColor="text-slate-800" 
                  href="https://v.douyin.com/YOUR_LINK/" // 💥 换成你的抖音主页链接
                />
                <SocialRow 
@@ -120,7 +120,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                />
                <SocialRow 
                  icon={<XIcon size={16} />} 
-                 title="Twitter (X)" desc="碎片化产品思考" iconBg="bg-slate-900/5" iconColor="text-slate-900" 
+                 title="Twitter (X)" desc="碎片化产品思考/大号被封了最近在申诉" iconBg="bg-slate-900/5" iconColor="text-slate-900" 
                  href="https://twitter.com/YOUR_HANDLE" // 💥 换成你的 X 链接
                />
 
