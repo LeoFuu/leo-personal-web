@@ -3,13 +3,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Home, Book, MessageSquare, Sparkles } from 'lucide-react';
-import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { AnimatePresence, motion, useScroll, useTransform, useSpring, useMotionValueEvent } from 'framer-motion';
 
 import { VoidSpirit } from '../components/features/VoidSpirit';
 import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
 import { NeuralView } from '../components/views/NeuralView';
 import { NotesView } from '../components/views/NotesView';
 import { GuestbookView } from '../components/views/GuestbookView';
+
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState('home');
@@ -27,6 +28,22 @@ export default function Page() {
   const { scrollY } = useScroll();
   const rawRotate = useTransform(scrollY, [0, 2000], [0, 1080]); 
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
+
+  // 💥 新增：滑动隐藏导航栏与回到顶部按钮的神器
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    // 只有在首页和笔记页才启用滑动隐藏（AI页和留言板保持不动）
+    if (activeTab !== 'home' && activeTab !== 'notes') return;
+    
+    const previous = scrollY.getPrevious() || 0;
+    // 如果向下滑动超过 100px，就隐藏导航栏
+    if (latest > previous && latest > 100) {
+      setIsNavVisible(false);
+    } 
+    // 如果向上滑动（哪怕只滑了一点点），或者回到了最顶部，立刻显示导航栏
+    else if (latest < previous || latest <= 100) {
+      setIsNavVisible(true);
+    }
+  });
 
   const triggerClearing = useCallback(() => {
     setBootState(prev => (prev === 'booting' ? 'clearing' : prev));

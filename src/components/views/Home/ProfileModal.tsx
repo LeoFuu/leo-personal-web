@@ -31,10 +31,15 @@ interface ProfileModalProps {
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
   const [mounted, setMounted] = useState(false);
+  // 💥 新增状态：控制微信二维码的显示与隐藏
+  const [showWeChatQR, setShowWeChatQR] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
+  
+  // 每次关闭名片时，重置二维码状态
+  useEffect(() => { if (!isOpen) setShowWeChatQR(false); }, [isOpen]);
+
+  // ... 下面的代码保持不变，直到找到渲染 SocialRow 的地方
 
   const modalContent = (
     <AnimatePresence>
@@ -77,53 +82,65 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               
               {/* 右侧：文字信息整体打包，完美左对齐 */}
               <div className="flex flex-col justify-center">
-                {/* 名字 */}
-                <h2 className="text-[26px] font-black text-slate-800 tracking-tight leading-none mb-1.5">付昱淋</h2>
+                
                 
                 {/* 定位 */}
                 <div className="flex items-center gap-1 text-slate-400/90 mb-2">
-                   <MapPin size={12} strokeWidth={2.5} />
-                   <span className="text-[10px] font-bold uppercase tracking-widest">Shenzhen, China</span>
+                   <MapPin size={8} strokeWidth={2.5} />
+                   <span className="text-[6px] font-bold uppercase tracking-widest">KaShi, China</span>
                 </div>
+                {/* 名字 */}
+                <h2 className="text-[26px] font-black text-slate-800 tracking-tight leading-none mb-1.5">付昱淋</h2>
                 
                 {/* 简介 */}
                 <p className="text-[12px] font-medium text-slate-600 leading-[1.6]">
-                  独立开发者 / UI设计爱好者<br/>探索极致的数字交互美学。
+                  独立开发者 / 会玩智能手机
                 </p>
               </div>
 
             </div>
 
             {/* 下方：紧凑的社交矩阵 */}
-            <div className="pt-4 space-y-2">
+            {/* 下方：紧凑的社交矩阵 */}
+            <div className="pt-4 space-y-2 relative">
                <SocialRow 
                  icon={<WeChatIcon size={20} className="translate-x-[1.5px] translate-y-[1.5px]" />} 
-                 title="WeChat" 
-                 desc="扫描二维码添加好友" 
-                 iconBg="bg-[#07C160]/10" 
-                 iconColor="text-[#07C160]" 
+                 title="WeChat" desc="扫描二维码添加好友" iconBg="bg-[#07C160]/10" iconColor="text-[#07C160]" 
+                 onClick={() => setShowWeChatQR(true)} // 💥 点击显示微信二维码
                />
                <SocialRow 
                  icon={<DouyinIcon size={16} />} 
-                 title="Douyin" 
-                 desc="日常灵感与数字生活" 
-                 iconBg="bg-slate-900/5" 
-                 iconColor="text-slate-800" 
+                 title="Douyin" desc="日常灵感与数字生活" iconBg="bg-slate-900/5" iconColor="text-slate-800" 
+                 href="https://v.douyin.com/YOUR_LINK/" // 💥 换成你的抖音主页链接
                />
                <SocialRow 
                  icon={<Github size={18} />} 
-                 title="GitHub" 
-                 desc="@LeoFuu" 
-                 iconBg="bg-slate-900/5" 
-                 iconColor="text-slate-800" 
+                 title="GitHub" desc="@LeoFuu" iconBg="bg-slate-900/5" iconColor="text-slate-800" 
+                 href="https://github.com/LeoFuu" // 💥 换成你的 GitHub 链接
                />
                <SocialRow 
                  icon={<XIcon size={16} />} 
-                 title="Twitter (X)" 
-                 desc="碎片化产品思考" 
-                 iconBg="bg-slate-900/5" 
-                 iconColor="text-slate-900" 
+                 title="Twitter (X)" desc="碎片化产品思考" iconBg="bg-slate-900/5" iconColor="text-slate-900" 
+                 href="https://twitter.com/YOUR_HANDLE" // 💥 换成你的 X 链接
                />
+
+               {/* 💥 微信二维码专属弹层 */}
+               <AnimatePresence>
+                 {showWeChatQR && (
+                   <motion.div 
+                     initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                     className="absolute inset-0 z-20 bg-white/95 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center"
+                   >
+                     <button onClick={() => setShowWeChatQR(false)} className="absolute top-3 right-3 p-2 text-slate-400 hover:text-slate-700 bg-slate-100 rounded-full"><X size={14} /></button>
+                     {/* ⚠️ 记得在 public 文件夹里放一张名叫 wechat-qr.jpg 的二维码图片！ */}
+                     <div className="w-32 h-32 bg-white p-2 rounded-xl shadow-sm border border-slate-200 mb-3">
+                       <img src="/wechat-qr.jpg" alt="WeChat QR" className="w-full h-full object-cover rounded-lg" />
+                     </div>
+                     <p className="text-[13px] font-bold text-slate-800">扫一扫，加我微信</p>
+                     <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: wxid_bs2qxqgxrrx722</p>
+                   </motion.div>
+                 )}
+               </AnimatePresence>
             </div>
           </motion.div>
         </motion.div>
@@ -135,17 +152,27 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   return createPortal(modalContent, document.body);
 };
 
-const SocialRow = ({ icon, title, desc, iconBg, iconColor }: { icon: React.ReactNode, title: string, desc: string, iconBg: string, iconColor: string }) => (
-  <div className="group flex items-center p-3 rounded-2xl bg-white/50 border border-white/60 hover:bg-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all cursor-pointer active:scale-[0.98]">
-     <div className={`w-10 h-10 rounded-[14px] ${iconBg} ${iconColor} flex items-center justify-center shrink-0`}>
-        {icon}
-     </div>
-     <div className="ml-3 flex-1">
-        <div className="text-[14px] font-bold text-slate-800 tracking-tight">{title}</div>
-        <div className="text-[11px] font-medium text-slate-400 mt-0.5">{desc}</div>
-     </div>
-     <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-slate-800 group-hover:bg-slate-100 transition-all">
-        <ChevronRight size={16} />
-     </div>
-  </div>
-);
+// 💥 升级后的 SocialRow：支持传入 href 跳转，或者 onClick 点击事件
+const SocialRow = ({ icon, title, desc, iconBg, iconColor, href, onClick }: { icon: React.ReactNode, title: string, desc: string, iconBg: string, iconColor: string, href?: string, onClick?: () => void }) => {
+  const Wrapper = href ? 'a' : 'div';
+  return (
+    <Wrapper 
+      href={href} 
+      target={href ? "_blank" : undefined} 
+      rel={href ? "noopener noreferrer" : undefined}
+      onClick={onClick}
+      className="group flex items-center p-3 rounded-2xl bg-white/50 border border-white/60 hover:bg-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all cursor-pointer active:scale-[0.98]"
+    >
+       <div className={`w-10 h-10 rounded-[14px] ${iconBg} ${iconColor} flex items-center justify-center shrink-0`}>
+          {icon}
+       </div>
+       <div className="ml-3 flex-1">
+          <div className="text-[14px] font-bold text-slate-800 tracking-tight">{title}</div>
+          <div className="text-[11px] font-medium text-slate-400 mt-0.5">{desc}</div>
+       </div>
+       <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-slate-800 group-hover:bg-slate-100 transition-all">
+          <ChevronRight size={16} />
+       </div>
+    </Wrapper>
+  );
+};

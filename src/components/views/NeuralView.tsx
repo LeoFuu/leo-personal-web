@@ -2,12 +2,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useIsPresent, useMotionValue, useSpring } from 'framer-motion';
 import { Send, Terminal } from 'lucide-react';
-import { callDeepSeek } from '../../lib/deepseek';
+import { callAI } from '../../lib/ai';
+import { supabase } from '../../lib/supabase';
 
 const MY_AVATAR = "/cartoonf.png"; 
 
 export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
-  const [messages, setMessages] = useState([{ role: 'ai', text: "你好，Leo。我是 VoidSpirit，你的数字分身。接入 DeepSeek 网络成功。" }]);
+  const [messages, setMessages] = useState([{ role: 'ai', text: "我是付昱淋的数字分身" }]);
+  // 💥 状态：保存当前访客的唯一 ID
+  const [sessionId, setSessionId] = useState<string>('');
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false); 
@@ -27,39 +30,53 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     if (!input.trim() || isThinking) return;
     const msg = input; 
     setInput('');
-    setMessages(p => [...p, { role: 'user', text: msg }]); 
+    
+    // 1. 更新前端界面
+    const newMessages = [...messages, { role: 'user', text: msg }];
+    setMessages(newMessages); 
     setIsThinking(true);
+    mouseX.set(0); mouseY.set(0); 
     
-    mouseX.set(0); 
-    mouseY.set(0); 
+    // 💥 2. 把用户说的话存入 Supabase！（异步存，不阻塞 UI）
+    supabase.from('ai_chats').insert([{ session_id: sessionId, role: 'user', content: msg }]).then();
     
-    const res = await callDeepSeek(msg); 
+    // 💥 3. 呼叫大模型，并把 sessionId 递过去！
+    const res = await callAI(newMessages, sessionId);
+    
     setIsThinking(false);
     setMessages(p => [...p, { role: 'ai', text: res }]);
+
+    // 💥 4. 把 AI 的回复存入 Supabase！
+    supabase.from('ai_chats').insert([{ session_id: sessionId, role: 'ai', content: res }]).then();
   };
 
-  useEffect(() => { 
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" }); 
-  }, [messages, isThinking]);
-
   useEffect(() => {
-    if (!window.visualViewport) return;
-    const vp = window.visualViewport;
-    const baseHeight = window.innerHeight;
+    // 检查这个用户以前来过没
+    let currentSession = localStorage.getItem('visitor_session_id');
+    if (!currentSession) {
+      // 没来过？当场发个身份证！(生成一个随机字符串)
+      currentSession = 'visitor_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('visitor_session_id', currentSession);
+    }
+    setSessionId(currentSession);
 
-    const handleResize = () => {
-      if (vp.height > baseHeight * 0.85) {
-        if (document.activeElement === inputRef.current) {
-          inputRef.current?.blur();
-        }
+    // 💥 读取历史记录的逻辑升级：直接去 Supabase 拉取！
+    const fetchHistory = async () => {
+      if (!currentSession) return;
+      const { data } = await supabase
+        .from('ai_chats')
+        .select('*')
+        .eq('session_id', currentSession)
+        .order('created_at', { ascending: true }); // 按时间正序排，旧的在上面
+      
+      if (data && data.length > 0) {
+        // 把数据库的格式转换成我们组件需要的格式
+        const dbMessages = data.map(msg => ({ role: msg.role, text: msg.content }));
+        setMessages(dbMessages);
       }
     };
-    vp.addEventListener('resize', handleResize);
-    return () => vp.removeEventListener('resize', handleResize);
+
+    fetchHistory();
   }, []);
 
   const handleInputFocus = () => {
@@ -157,7 +174,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
           {isThinking && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3 w-full flex-row">
               <div className="shrink-0 mt-1"><div className="w-9 h-9 rounded-full border border-white/20 overflow-hidden bg-slate-900 opacity-50 animate-pulse shadow-md"><img src={MY_AVATAR} alt="Clone" className="w-full h-full object-cover" /></div></div>
-              <div className="max-w-[75%]"><div className="px-5 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl flex items-center gap-2"><Terminal size={14} className="text-white/40" /><span className="text-[12px] font-mono text-white/50 animate-pulse">Thinking...</span></div></div>
+              <div className="max-w-[75%]"><div className="px-5 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl flex items-center gap-2"><span className="text-[12px] font-mono text-white/50 animate-pulse">让我想想...</span></div></div>
             </motion.div>
           )}
           <div ref={scrollRef} className="h-2 shrink-0" />

@@ -18,10 +18,12 @@ export const GuestbookView = () => {
   const [isHoveringSubmit, setIsHoveringSubmit] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // 💥 新增状态：探测输入框是否被激活（是否唤起了手机键盘）
+  const [isFocused, setIsFocused] = useState(false);
 
   const fetchMessages = async () => {
     try {
-      // 留言板页面依然展示所有通过审核的留言（不需要精选也能展示）
       const { data, error } = await supabase
         .from('guestbook')
         .select('*')
@@ -40,6 +42,12 @@ export const GuestbookView = () => {
   useEffect(() => {
     fetchMessages();
   }, []);
+
+  // 💥 核心魔法：跨组件操控导航栏的显隐
+  useEffect(() => {
+    // 派发自定义事件给 page.tsx，告诉它：“键盘出来了，把导航栏收起来！”
+    window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: !isFocused }));
+  }, [isFocused]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +69,8 @@ export const GuestbookView = () => {
 
       setInputValue('');
       fetchMessages();
+      // 提交完自动失去焦点，让键盘收起
+      (document.activeElement as HTMLElement)?.blur();
     } catch (err) {
       console.error("提交失败:", err);
       alert("发射失败，似乎碰到了引力波 😢");
@@ -82,6 +92,18 @@ export const GuestbookView = () => {
       style={{ willChange: 'transform, opacity', transform: 'translateZ(0)' }}
       className="pt-10 pb-40 px-5 sm:px-0 w-full min-h-screen flex flex-col items-center"
     >
+      {/* 💥 CSS 魔法注入：强制隐藏右下角的发条按钮 */}
+      {isFocused && (
+        <style dangerouslySetInnerHTML={{ __html: `
+          .fixed.right-6.bottom-32 { 
+            opacity: 0 !important; 
+            transform: scale(0.8) !important;
+            pointer-events: none !important; 
+            transition: all 0.3s ease !important;
+          }
+        `}} />
+      )}
+
       <div className="w-full max-w-md">
         
         <div className="mb-10 text-left pt-2">
@@ -104,6 +126,9 @@ export const GuestbookView = () => {
             <textarea 
               value={inputValue} 
               onChange={(e) => setInputValue(e.target.value)} 
+              // 💥 增加焦点探测事件
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               disabled={isSubmitting}
               placeholder="我想听到你的声音，记得给我留言..." 
               className="w-full bg-transparent border-none outline-none resize-none h-16 text-[15px] text-slate-800 placeholder:text-slate-400/80 font-medium scrollbar-hide disabled:opacity-50" 
@@ -114,6 +139,8 @@ export const GuestbookView = () => {
                 disabled={!inputValue.trim() || isSubmitting}
                 onMouseEnter={() => setIsHoveringSubmit(true)} 
                 onMouseLeave={() => setIsHoveringSubmit(false)} 
+                // 防止点击发送按钮时抢夺焦点导致键盘意外收回，使用 onPointerDown 拦截
+                onPointerDown={(e) => e.preventDefault()}
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 ${inputValue.trim() && !isSubmitting ? 'bg-slate-800 shadow-md' : 'bg-slate-100/80 cursor-not-allowed'}`}
               >
                 {isSubmitting ? (
@@ -132,7 +159,7 @@ export const GuestbookView = () => {
           {isLoading ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center py-10 text-slate-400 gap-2">
               <Loader2 size={20} className="animate-spin opacity-50" />
-              <span className="text-[10px] font-bold tracking-widest uppercase">加载动画还没做...</span>
+              <span className="text-[10px] font-bold tracking-widest uppercase">读取留言中...</span>
             </motion.div>
           ) : messages.length === 0 ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-10 text-[13px] font-medium text-slate-400">
@@ -165,13 +192,12 @@ export const GuestbookView = () => {
                   </div>
                   <p className="text-[14px] font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   
-                  {/* 💥 UI 修正：极简克制风的站长回复 */}
                   {msg.reply && (
                     <div className="mt-4 pt-3 border-t border-slate-200/50">
                       <div className="flex items-center gap-2 mb-1.5">
                          <span className="text-[11px] font-black text-slate-800 tracking-tight">付昱淋</span>
                          <span className="px-1.5 py-[2px] bg-slate-100/80 border border-slate-200/80 text-slate-500 rounded-[6px] text-[8px] font-bold tracking-widest uppercase shadow-sm">
-                           nb666
+                           站长
                          </span>
                       </div>
                       <p className="text-[12px] font-medium text-slate-600 leading-relaxed">{msg.reply}</p>
