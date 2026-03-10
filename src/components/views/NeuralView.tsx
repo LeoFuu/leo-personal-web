@@ -1,7 +1,7 @@
 // src/components/views/NeuralView.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useIsPresent, useMotionValue, useSpring } from 'framer-motion';
-import { Send, Terminal } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { callAI } from '../../lib/ai';
 import { supabase } from '../../lib/supabase';
 
@@ -12,12 +12,12 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [sessionId, setSessionId] = useState<string>('');
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  
+  // 核心状态：监控键盘
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false); 
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
-  const isFirstRender = useRef(true);
   const isPresent = useIsPresent();
 
   const mouseX = useMotionValue(0);
@@ -30,9 +30,10 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     const msg = input; 
     setInput('');
     
-    // 强制输入法失去焦点并收起
+    // 💥 修复：发送完消息后，强制输入法失去焦点并收起！
     inputRef.current?.blur();
     setIsKeyboardOpen(false);
+    window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: true }));
     
     const newMessages = [...messages, { role: 'user', text: msg }];
     setMessages(newMessages); 
@@ -40,20 +41,18 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     mouseX.set(0); mouseY.set(0); 
     
     supabase.from('ai_chats').insert([{ session_id: sessionId, role: 'user', content: msg }]).then();
-    
     const res = await callAI(newMessages, sessionId);
     
     setIsThinking(false);
     setMessages(p => [...p, { role: 'ai', text: res }]);
-
     supabase.from('ai_chats').insert([{ session_id: sessionId, role: 'ai', content: res }]).then();
   };
 
-  // 保证新消息出现时自动滚到底部
+  // 💥 修复：保证无论何时，新消息出现必定丝滑滚到底部
   useEffect(() => {
     const timer = setTimeout(() => {
       scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-    }, 100); // 稍微加长一点点延迟，保证渲染绝对完成
+    }, 100);
     return () => clearTimeout(timer);
   }, [messages, isThinking]);
 
@@ -85,7 +84,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const handleInputFocus = () => {
     setIsKeyboardOpen(true);
     window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: false }));
-    setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+    setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 300);
   };
 
   const handleInputBlur = () => {
@@ -103,42 +102,43 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: "100%" }} 
+      // 降低出场动画的剧烈程度，防止手机瞬间卡顿
+      initial={{ opacity: 0, y: "10%" }} 
       animate={{ opacity: 1, y: 0 }} 
-      exit={{ opacity: 0, y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
+      exit={{ opacity: 0, y: "10%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      // 💥 修复 1：使用 h-[100dvh] 完美解决浏览器网址框缩放导致的错位和切眼 Bug！
-      className="fixed top-0 left-0 mx-auto w-full h-[100dvh] max-w-md bg-[#0A0A0A] z-[45] overflow-hidden rounded-t-[32px] sm:rounded-none"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.05)', overscrollBehavior: 'none' }}
+      
+      // 💥 终极弹性盒子架构（Flexbox）！摒弃一切 absolute，依靠 flex-col 原生排版，绝不消失！
+      className="fixed inset-x-0 top-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] flex flex-col overflow-hidden transition-all duration-300 ease-out sm:rounded-none"
+      style={{
+        // 没开键盘时，给底部的全局导航栏精准留出 100px 空间；开了键盘直接怼到底部吸附！
+        bottom: isKeyboardOpen ? 0 : '100px', 
+        borderTop: '1px solid rgba(255,255,255,0.05)'
+      }}
     >
+      {/* 强行把页面底板染黑，根治一切边缘白光 */}
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
-          nav .z-\\[9999\\] { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.1s; }
-          .fixed.bottom-0.z-40 { display: none !important; }
-          /* 💥 修复 2：强行把页面底色染黑！就算浏览器跟不上重新渲染，也绝不漏出白边闪瞎眼！ */
           html, body { overscroll-behavior: none !important; background-color: #0A0A0A !important; }
         `}} />
       )}
 
-      {/* 头部大眼睛 */}
-      <div className="absolute top-0 inset-x-0 h-[110px] flex justify-center items-center gap-6 z-20 pointer-events-none border-b border-white/5 pt-6 pb-2 bg-transparent">
+      {/* 第一层：头部大眼睛（固定高度 110px，绝对不会变） */}
+      <div className="shrink-0 h-[110px] flex justify-center items-center gap-6 border-b border-white/5 bg-[#0A0A0A] relative z-20">
         {[0, 1].map((i) => (
-          <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)] translate-z-0">
+          <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)]">
             <motion.div 
               style={{ x: springX, y: springY }}
-              className="w-8 h-8 bg-black rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 will-change-transform translate-z-0"
+              className="w-8 h-8 bg-black rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             />
           </div>
         ))}
       </div>
 
-      <div 
-        className="absolute inset-x-0 overflow-y-auto px-4 sm:px-6 scrollbar-hide scroll-smooth z-10"
-        // 💥 修复 3：动态调整聊天区域的底部距离，给导航栏和输入框留出空间
-        style={{ top: '110px', bottom: isKeyboardOpen ? '70px' : '130px', overscrollBehaviorY: 'contain' }}
-      >
-        <div className="flex flex-col space-y-6 pt-4 pb-6">
+      {/* 第二层：聊天区域（flex-1 自动吃掉所有剩下的空间，原生滚动极度丝滑） */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-2 scrollbar-hide scroll-smooth relative z-10">
+        <div className="flex flex-col space-y-6">
           {messages.map((m, i) => (
             <motion.div 
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -166,39 +166,35 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
             </motion.div>
           )}
 
-          <div ref={scrollRef} className="h-6 shrink-0 w-full" />
+          {/* 底部微小占位符，保证滚动到底部留有间隙 */}
+          <div ref={scrollRef} className="h-4 shrink-0 w-full" />
         </div>
       </div>
 
-      {/* 💥 修复 4：恢复输入框的动态高度补偿！没开键盘时，垫高 110px 完美越过底部导航栏！ */}
-      <div 
-        className="absolute inset-x-0 bottom-0 bg-[#0A0A0A] z-30 transition-all duration-300" 
-        style={{ paddingBottom: isKeyboardOpen ? '16px' : '110px', paddingTop: '12px' }}
-      >
-        <div className="absolute -top-16 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pointer-events-none" />
-        
-        <div className="px-6 sm:px-10">
-          <div className="p-1 bg-white/[0.08] border border-white/10 backdrop-blur-2xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-            <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
-              <input 
-                ref={inputRef}
-                value={input} 
-                onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
-                onKeyDown={e => e.key === 'Enter' && handleSend()} 
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
-                placeholder="与数字分身对话..." 
-                className="w-full bg-transparent border-none text-white/90 placeholder:text-white/40 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-5 pr-11" 
-              />
-              <button 
-                onClick={handleSend} 
-                onPointerDown={(e) => e.preventDefault()} 
-                disabled={isThinking || !input.trim()} 
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
-              >
-                <Send size={18} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
-              </button>
-            </div>
+      {/* 第三层：输入框区域（稳稳地像块砖头一样垫在最底下，绝不跑偏） */}
+      <div className="shrink-0 bg-[#0A0A0A] border-t border-white/5 px-4 sm:px-8 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] relative z-20">
+        <div className="absolute -top-10 inset-x-0 h-10 bg-gradient-to-t from-[#0A0A0A] to-transparent pointer-events-none" />
+        <div className="p-1 bg-white/[0.08] border border-white/10 backdrop-blur-2xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+          <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
+            <input 
+              ref={inputRef}
+              value={input} 
+              onChange={e => { setInput(e.target.value); if (Math.random() > 0.5) { mouseX.set((Math.random() - 0.5) * 10); mouseY.set((Math.random() - 0.5) * 10); } }} 
+              onKeyDown={e => e.key === 'Enter' && handleSend()} 
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              placeholder="与数字分身对话..." 
+              className="w-full bg-transparent border-none text-white/90 placeholder:text-white/40 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-5 pr-11" 
+            />
+            <button 
+              onClick={handleSend} 
+              // 拦截鼠标点击导致的意外失去焦点事件
+              onPointerDown={(e) => e.preventDefault()} 
+              disabled={isThinking || !input.trim()} 
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
+            >
+              <Send size={18} className={input.trim() && !isThinking ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
+            </button>
           </div>
         </div>
       </div>
