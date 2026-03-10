@@ -64,28 +64,55 @@ export default function Page() {
 
   const handleNavClick = (tabId: string) => {
     if (tabId === activeTab || pendingTab === tabId) return;
+    
+    // 清除所有正在进行的动画计时器
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
     window.scrollTo({ top: 0, behavior: 'auto' });
 
+    // 💥 状态机 1：跳转到 AI 页（Neural）
+    // 逻辑：小精灵直接消失（拔掉 target），瞬间切换页面，绝不拖泥带水！
     if (tabId === 'neural') {
-      setSpiritTarget(tabId); setPendingTab(tabId); setActiveTab(tabId); return; 
+      setSpiritTarget(null); 
+      setPendingTab(tabId); 
+      setActiveTab(tabId); 
+      return; 
     }
 
+    // --- 下面是其他页面的通用起跳动作 ---
     const isStartingFromPage = spiritTarget === null;
     setIsPreparing(true);
     setJumpType(isStartingFromPage ? 'dive' : 'hop');
 
+    // 动作 1：小精灵先跳到导航栏的目标图标上
     timers.current.spirit = setTimeout(() => {
-        setIsPreparing(false); setSpiritTarget(tabId); setPendingTab(tabId);       
+        setIsPreparing(false); 
+        setSpiritTarget(tabId); // 让小精灵稳稳落在导航栏
+        setPendingTab(tabId);       
+        
+        // 瞬间切换页面内容
         timers.current.pageExit = setTimeout(() => { setActiveTab(tabId); }, 50);
     }, 150); 
 
-    timers.current.prepare = setTimeout(() => {
-        setIsPreparing(true); setJumpType(tabId === 'home' ? 'soar' : 'dive'); 
-        timers.current.jump = setTimeout(() => {
-            setIsPreparing(false); setSpiritTarget(null); setPendingTab(null);   
-        }, 150);
-    }, 3150); 
+    //  状态机 2：跳转到“笔记”或“留言板”
+    // 逻辑：直接 return！不去触发后续的乱跳代码，让它安安静静趴在导航栏陪你看书！
+    if (tabId === 'notes' || tabId === 'guestbook') {
+      return;
+    }
+
+    //  状态机 3：跳转到“首页”
+    // 逻辑：在导航栏短暂停留一下，然后立刻蓄力跳向中间的卡片！
+    if (tabId === 'home') {
+      timers.current.prepare = setTimeout(() => {
+          setIsPreparing(true); 
+          setJumpType('soar'); // 设置起飞姿势
+          
+          timers.current.jump = setTimeout(() => {
+              setIsPreparing(false); 
+              setSpiritTarget(null); // 设为 null，把渲染权交接给 HomeView，实现飞入名片！
+              setPendingTab(null);   
+          }, 150);
+      }, 500); //  关键修复：把原本漫长拖沓的 3150ms 缩短到 500ms！极限清爽！
+    }
   };
 
   const navItems = [

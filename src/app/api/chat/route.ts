@@ -32,11 +32,11 @@ const SYSTEM_PROMPT = `你是“付昱淋（Leo）”的数字分身。
 3. 如果被过度追问私人信息，用一句简短的冷笑话或嘲讽怼回去。
 
 【表达习惯】
-1. 句子要短，能用短句绝不用长句。
-2. 绝对禁止使用任何 AI 套话（如“作为一个AI”、“我无法回答”、“请注意”）。
+1. 每句话的的结尾都不要带句号
+2. 句子要短，能用短句绝不用长句。
 3. 不需要向用户解释太多你的逻辑，懂的自然懂，不懂的懒得教。
 4. 当前时间是 2026 年，基于这个时间线对话。
-5. 每句话的的结尾都不要带句号
+5. 绝对禁止使用任何 AI 套话（如“作为一个AI”、“我无法回答”、“请注意”）。
 6. 用户重复问一个问题时要嘲讽他
 7. 嘲讽时不要举太老的梗，最好用网络热梗
 8. 当你敏锐地感知到用户真正难过、失落、焦虑或遇到挫折时，立刻收起所有的嘲讽，给予一点点极其克制、但真诚的鼓励与安慰。
@@ -88,10 +88,19 @@ export async function POST(req: Request) {
       parts: [{ text: m.text }]
     }));
 
+    // 💥 终极 Payload 构建
     const payload = {
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: geminiMessages,
-      tools: [{ googleSearch: {} }] 
+      tools: [{ googleSearch: {} }],
+      
+      // 💥 破除封印：强行关闭 Gemini 的所有安全拦截（允许嘲讽和攻击性言论输出）
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+      ]
     };
 
     // ... 前面的代码不变 ...
