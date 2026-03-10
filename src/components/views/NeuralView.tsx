@@ -12,8 +12,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [sessionId, setSessionId] = useState<string>('');
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  
-  // 核心状态：监控键盘
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false); 
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -30,7 +28,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     const msg = input; 
     setInput('');
     
-    // 💥 修复：发送完消息后，强制输入法失去焦点并收起！
     inputRef.current?.blur();
     setIsKeyboardOpen(false);
     window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: true }));
@@ -48,7 +45,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
     supabase.from('ai_chats').insert([{ session_id: sessionId, role: 'ai', content: res }]).then();
   };
 
-  // 💥 修复：保证无论何时，新消息出现必定丝滑滚到底部
   useEffect(() => {
     const timer = setTimeout(() => {
       scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -102,29 +98,21 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 降低出场动画的剧烈程度，防止手机瞬间卡顿
       initial={{ opacity: 0, y: "10%" }} 
       animate={{ opacity: 1, y: 0 }} 
       exit={{ opacity: 0, y: "10%", transition: { duration: 0.25, ease: "easeIn" } }}
       transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      
-      // 💥 终极弹性盒子架构（Flexbox）！摒弃一切 absolute，依靠 flex-col 原生排版，绝不消失！
-      className="fixed inset-x-0 top-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] flex flex-col overflow-hidden transition-all duration-300 ease-out sm:rounded-none"
-      style={{
-        // 没开键盘时，给底部的全局导航栏精准留出 100px 空间；开了键盘直接怼到底部吸附！
-        bottom: isKeyboardOpen ? 0 : '100px', 
-        borderTop: '1px solid rgba(255,255,255,0.05)'
-      }}
+      // 💥 修复 1：将 bottom 动态位移彻底删除，改为 fixed inset-0。让黑框永远填满整个屏幕！
+      className="fixed inset-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] flex flex-col overflow-hidden sm:rounded-none"
+      style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
     >
-      {/* 强行把页面底板染黑，根治一切边缘白光 */}
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
           html, body { overscroll-behavior: none !important; background-color: #0A0A0A !important; }
         `}} />
       )}
 
-      {/* 第一层：头部大眼睛（固定高度 110px，绝对不会变） */}
       <div className="shrink-0 h-[110px] flex justify-center items-center gap-6 border-b border-white/5 bg-[#0A0A0A] relative z-20">
         {[0, 1].map((i) => (
           <div key={i} className="w-20 h-24 bg-[#FFD700] rounded-full relative overflow-hidden shadow-[0_0_20px_rgba(255,215,0,0.3)]">
@@ -136,7 +124,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
         ))}
       </div>
 
-      {/* 第二层：聊天区域（flex-1 自动吃掉所有剩下的空间，原生滚动极度丝滑） */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-2 scrollbar-hide scroll-smooth relative z-10">
         <div className="flex flex-col space-y-6">
           {messages.map((m, i) => (
@@ -166,15 +153,18 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
             </motion.div>
           )}
 
-          {/* 底部微小占位符，保证滚动到底部留有间隙 */}
           <div ref={scrollRef} className="h-4 shrink-0 w-full" />
         </div>
       </div>
 
-      {/* 第三层：输入框区域（稳稳地像块砖头一样垫在最底下，绝不跑偏） */}
-      <div className="shrink-0 bg-[#0A0A0A] border-t border-white/5 px-4 sm:px-8 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] relative z-20">
+      <div 
+        // 💥 修复 2：容器本身不动，只改变内部的 padding-bottom！
+        // 没开键盘时，内部填高 100px 把输入框顶上来；开了键盘时，内边距变小，输入框下沉！完美掩盖所有白边！
+        className="shrink-0 bg-[#0A0A0A] border-t border-white/5 px-4 sm:px-8 pt-4 relative z-20 transition-all duration-300 ease-out"
+        style={{ paddingBottom: isKeyboardOpen ? 'calc(1rem + env(safe-area-inset-bottom))' : '100px' }}
+      >
         <div className="absolute -top-10 inset-x-0 h-10 bg-gradient-to-t from-[#0A0A0A] to-transparent pointer-events-none" />
-        <div className="p-1 bg-white/[0.08] border border-white/10 backdrop-blur-2xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+        <div className="p-1 bg-white/[0.08] border border-white/10 backdrop-blur-2xl rounded-[28px] shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative z-30">
           <div className="relative flex items-center bg-black rounded-[24px] border border-white/[0.1] overflow-hidden">
             <input 
               ref={inputRef}
@@ -188,7 +178,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
             />
             <button 
               onClick={handleSend} 
-              // 拦截鼠标点击导致的意外失去焦点事件
               onPointerDown={(e) => e.preventDefault()} 
               disabled={isThinking || !input.trim()} 
               className={`absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-all duration-300 active:scale-90 bg-transparent ${isThinking || !input.trim() ? 'text-white/20' : 'text-[#FFD700] hover:text-[#FFE44D]'}`}
