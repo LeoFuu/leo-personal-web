@@ -143,7 +143,7 @@ export default function Page() {
   }, [bootState, triggerClearing]);
 
   useEffect(() => { 
-    const safetyTimer = setTimeout(() => { triggerClearing(); }, 4000); 
+    const safetyTimer = setTimeout(() => { triggerClearing(); }, 1000); 
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
     return () => { clearTimeout(safetyTimer); window.removeEventListener('toggle-navbar', handleToggle); };
