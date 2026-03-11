@@ -6,6 +6,7 @@ import { callAI } from '../../lib/ai';
 import { supabase } from '../../lib/supabase';
 
 const MY_AVATAR = "/cartoonf.png"; 
+const USER_AVATAR = "/ME.png";
 
 export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [messages, setMessages] = useState([{ role: 'ai', text: "我是付昱淋的数字分身" }]);
@@ -134,6 +135,17 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
               key={i} className={`flex items-start gap-3 w-full ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
               <div className="shrink-0 mt-1">
+                {m.role === 'ai' ? (
+                  <div className="w-9 h-9 rounded-full border border-white/20 shadow-[0_0_12px_rgba(255,255,255,0.05)] overflow-hidden bg-slate-900">
+                    <img src={MY_AVATAR} alt="Clone" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  // 💥 这里把写着 ME 的灰圈，彻底换成了真实的头像！
+                  <div className="w-9 h-9 rounded-full border border-white/20 overflow-hidden shadow-lg bg-slate-800">
+                    <img src={USER_AVATAR} alt="User" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div><div className="shrink-0 mt-1">
                 {m.role === 'ai' ? (
                   <div className="w-9 h-9 rounded-full border border-white/20 shadow-[0_0_12px_rgba(255,255,255,0.05)] overflow-hidden bg-slate-900"><img src={MY_AVATAR} alt="Clone" className="w-full h-full object-cover" /></div>
                 ) : (

@@ -123,7 +123,6 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
       <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
 
       {/* 顶部：原汁原味的金属夹子和名片堆叠区域 */}
-      {/* 顶部：原汁原味的金属夹子和名片堆叠区域 */}
       <motion.div 
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
