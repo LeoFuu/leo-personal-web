@@ -197,7 +197,7 @@ export const GuestbookView = () => {
                       <div className="flex items-center gap-2 mb-1.5">
                          <span className="text-[11px] font-black text-slate-800 tracking-tight">付昱淋</span>
                          <span className="px-1.5 py-[2px] bg-slate-100/80 border border-slate-200/80 text-slate-500 rounded-[6px] text-[8px] font-bold tracking-widest uppercase shadow-sm">
-                           站长
+                           xxf
                          </span>
                       </div>
                       <p className="text-[12px] font-medium text-slate-600 leading-relaxed">{msg.reply}</p>
