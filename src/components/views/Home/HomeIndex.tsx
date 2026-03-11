@@ -143,11 +143,12 @@ export const HomeIndex: React.FC<HomeProps> = ({
 
       {/* 💥 宇宙跳跃计数器 (右上角)：下拉时会平滑渐隐！ */}
       <motion.div 
-        className="fixed top-6 right-6 sm:top-10 sm:right-10 z-[100] flex flex-col items-end justify-center"
-        // 将刚设置的随滚动变化的透明度和指针事件赋予它
+        className="fixed top-6 right-6 sm:top-10 sm:right-10 z-[100] flex flex-col items-center justify-center"
         style={{ opacity: counterOpacity, pointerEvents: counterPointerEvents as any }}
       >
-        <span className="text-[9px] font-black text-slate-400/80 tracking-widest uppercase mb-1.5 drop-shadow-sm transition-opacity hover:opacity-100">Jumps</span>
+        {/* 顺便把文字改成你想要的 JUMPS */}
+        {/* 💥 核心修复：加了 pl-[0.1em] 来抵消 tracking-widest 在右侧产生的虚假占位！ */}
+        <span className="text-[9px] font-black text-slate-400/80 tracking-widest uppercase mb-1.5 drop-shadow-sm transition-opacity hover:opacity-100 pl-[0.1em]">Jumps</span>
         <div className="px-3.5 py-1.5 rounded-full bg-white/70 backdrop-blur-md border border-slate-200/80 shadow-sm flex items-center justify-center min-w-[40px] transition-opacity hover:opacity-100">
           <span className="text-xs font-black text-slate-800">{globalJumps.toLocaleString()}</span>
         </div>
@@ -180,8 +181,8 @@ export const HomeIndex: React.FC<HomeProps> = ({
       </motion.div>
 
       {/* 过渡动画 */}
-      <motion.div className="w-full flex justify-center mt-4 mb-8 opacity-40 z-10" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
-        <ArrowDown size={14} className="text-slate-500" />
+      <motion.div className="w-full flex justify-center -mt-4 mb-10 opacity-40 z-10" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
+        <ArrowDown size={12} className="text-slate-500" />
       </motion.div>
 
       {/* 底部：时间轴 */}
