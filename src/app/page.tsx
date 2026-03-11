@@ -64,7 +64,7 @@ export default function Page() {
   useEffect(() => {
     if (bgMusicRef.current) {
       // 💥 调整 BGM 音量：0.0 到 1.0 之间。0.3 就是 30% 音量，非常适合做背景音
-      bgMusicRef.current.volume = 0.3; 
+      bgMusicRef.current.volume = 0.15; 
     }
   }, []);
 
@@ -103,7 +103,7 @@ export default function Page() {
           osc.frequency.setValueAtTime(300, globalAudioCtx.currentTime); 
           osc.frequency.exponentialRampToValueAtTime(600, globalAudioCtx.currentTime + 0.1); 
           
-          gain.gain.setValueAtTime(0.6, globalAudioCtx.currentTime);
+          gain.gain.setValueAtTime(0.7, globalAudioCtx.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.01, globalAudioCtx.currentTime + 0.15);
 
           osc.connect(gain);
