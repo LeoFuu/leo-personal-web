@@ -147,7 +147,7 @@ export const HomeIndex: React.FC<HomeProps> = ({
         // 将刚设置的随滚动变化的透明度和指针事件赋予它
         style={{ opacity: counterOpacity, pointerEvents: counterPointerEvents as any }}
       >
-        <span className="text-[9px] font-black text-slate-400/80 tracking-widest uppercase mb-1.5 drop-shadow-sm transition-opacity hover:opacity-100">Global Jumps</span>
+        <span className="text-[9px] font-black text-slate-400/80 tracking-widest uppercase mb-1.5 drop-shadow-sm transition-opacity hover:opacity-100">Jumps</span>
         <div className="px-3.5 py-1.5 rounded-full bg-white/70 backdrop-blur-md border border-slate-200/80 shadow-sm flex items-center justify-center min-w-[40px] transition-opacity hover:opacity-100">
           <span className="text-xs font-black text-slate-800">{globalJumps.toLocaleString()}</span>
         </div>
