@@ -21,6 +21,9 @@ export default function Page() {
   const [bootState, setBootState] = useState<'booting' | 'clearing' | 'ready'>('booting');
   const [isNavVisible, setIsNavVisible] = useState(true);
   
+  // 💥 追踪是否被微信/浏览器强行拦截了自动播放
+  const [requireTouch, setRequireTouch] = useState(false);
+  
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, spirit: null, pageExit: null });
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -28,6 +31,7 @@ export default function Page() {
   const rawRotate = useTransform(scrollY, [0, 2000], [0, 1080]); 
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
+  // 导航栏滑动隐藏逻辑
   useMotionValueEvent(scrollY, "change", (latest) => {
     if (activeTab !== 'home' && activeTab !== 'notes') return;
     const previous = scrollY.getPrevious() || 0;
@@ -42,53 +46,69 @@ export default function Page() {
     setBootState(prev => (prev === 'booting' ? 'clearing' : prev));
   }, []);
 
-  // 💥 微信黑屏终极克星：强制唤醒播放 Hook
+  // 💥 核心魔法：智能探测播放拦截 & 优雅引导 UI Hook
   useEffect(() => {
     const video = videoRef.current;
     if (!video || bootState !== 'booting') return;
 
-    const forcePlay = () => {
-      video.play().catch(() => {
-        // 如果连物理点击都被浏览器无情拒绝，直接跳过黑屏动画进网站！不能让用户干等！
-        triggerClearing();
-      });
+    // 尝试播放的函数
+    const attemptPlay = () => {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // ⚠️ 如果执行到这里，说明被微信/iOS无情拦截了！立刻呼叫 UI 支援！
+          setRequireTouch(true);
+        });
+      }
     };
 
-    // 魔法 1：监听微信专属的底层 JSBridge 准备就绪事件
+    // 1. 进来先探探路
+    attemptPlay();
+
+    // 2. 微信环境：等待底层组件就绪后再试一次
     if ((window as any).WeixinJSBridge) {
-      forcePlay();
+      attemptPlay();
     } else {
-      document.addEventListener("WeixinJSBridgeReady", forcePlay, false);
+      document.addEventListener("WeixinJSBridgeReady", attemptPlay, false);
     }
 
-    // 魔法 2：触屏保底。只要用户手指碰了一下屏幕（任何地方），立刻强制唤醒视频！
-    const handleTouch = () => {
-      forcePlay();
-      document.removeEventListener('touchstart', handleTouch);
+    // 3. 用户触屏交互事件（无论在哪点一下屏幕，立刻起飞）
+    const handleUserInteraction = () => {
+      video.play()
+        .then(() => setRequireTouch(false)) // 播放成功，隐藏提示语
+        .catch(() => triggerClearing()); // 如果用户点了还是播不出来，直接跳过动画进网站保底！
+        
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('click', handleUserInteraction);
     };
-    document.addEventListener('touchstart', handleTouch, { once: true });
+    
+    // 绑定触摸和点击事件
+    document.addEventListener('touchstart', handleUserInteraction, { once: true });
+    document.addEventListener('click', handleUserInteraction, { once: true });
 
     return () => {
-      document.removeEventListener("WeixinJSBridgeReady", forcePlay, false);
-      document.removeEventListener('touchstart', handleTouch);
+      document.removeEventListener("WeixinJSBridgeReady", attemptPlay, false);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('click', handleUserInteraction);
     };
   }, [bootState, triggerClearing]);
 
-  // 保底安全定时器
+  // 保底安全定时器：就算完全不管，4秒后也得让人进网站
   useEffect(() => { 
-    // 把 5 秒缩短到 4 秒，防止用户失去耐心
     const safetyTimer = setTimeout(() => { triggerClearing(); }, 4000); 
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
     return () => { clearTimeout(safetyTimer); window.removeEventListener('toggle-navbar', handleToggle); };
   }, [triggerClearing]);
 
+  // 过渡状态
   useEffect(() => {
     let readyTimer: ReturnType<typeof setTimeout> | null = null;
     if (bootState === 'clearing') { readyTimer = setTimeout(() => { setBootState('ready'); }, 1200); }
     return () => { if(readyTimer) clearTimeout(readyTimer); };
   }, [bootState]);
 
+  // 导航栏切换与小精灵跳跃逻辑
   const handleNavClick = (tabId: string) => {
     if (tabId === activeTab || pendingTab === tabId) return;
     
@@ -154,10 +174,11 @@ export default function Page() {
         {bootState !== 'ready' && (
           <motion.div className="fixed inset-0 z-[99999] bg-black flex items-center justify-center pointer-events-none" initial={{ opacity: 1 }} animate={{ opacity: bootState === 'clearing' ? 0 : 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.2 }}>
             <motion.div className="flex flex-col items-center justify-center" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-               <div className="relative group">
+               
+               <div className="relative group flex items-center justify-center">
                    <div className="absolute inset-[-10%] sm:inset-[-20%] z-10 pointer-events-none" style={{ background: "radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 80%)" }} />
                    
-                   {/* 💥 微信视频保命全家桶属性：webkit-playsinline, x5-playsinline, x5-video-player-type */}
+                   {/* 💥 视频组件：挂载了微信 X5 播放保命全家桶 */}
                    <video 
                      ref={videoRef} 
                      src="/start.mp4" 
@@ -170,11 +191,32 @@ export default function Page() {
                      x5-video-player-fullscreen="false" 
                      preload="auto" 
                      className="w-[260px] sm:w-[320px] h-auto object-contain pointer-events-auto" 
-                     onCanPlay={() => { videoRef.current?.play().catch(() => {}); }} 
                      onEnded={triggerClearing} 
                      onError={triggerClearing} 
                    />
+
+                   {/* 💥 优雅的 Touch 引导 UI，只在微信拦截时出现 */}
+                   <AnimatePresence>
+                     {requireTouch && (
+                       <motion.div 
+                         initial={{ opacity: 0, scale: 0.9 }} 
+                         animate={{ opacity: 1, scale: 1 }} 
+                         exit={{ opacity: 0, scale: 0.9 }}
+                         className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
+                       >
+                         {/* 呼吸发光的播放按钮 */}
+                         <div className="w-14 h-14 rounded-full border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center mb-4 animate-pulse shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                           <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[12px] border-l-white/80 border-b-[8px] border-b-transparent ml-1" />
+                         </div>
+                         {/* 极客风的提示文字 */}
+                         <span className="text-white/60 text-[10px] font-bold tracking-[0.3em] uppercase animate-pulse">
+                           Tap to Boot System
+                         </span>
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
                </div>
+
             </motion.div>
           </motion.div>
         )}
