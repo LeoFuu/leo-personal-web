@@ -100,15 +100,17 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ projectId, onClose }
             </div>
 
             {/* 核心内容区 */}
-            <div className="flex-1 overflow-y-auto p-8 pt-2 scrollbar-hide">
+            {/* 💥 重点修改：在这个 div 上加上 bg-white/90 (保证颜色一致性，如果你用了 site.ts 里的 bgClass 就读 bgClass) 和 sm:rounded-[40px] rounded-t-[40px] (强制强制强制匹配外层圆角)！ */}
+            <div className="flex-1 overflow-y-auto p-8 pt-2 -mt-8 relative z-10 scrollbar-hide bg-white/95 backdrop-blur-3xl sm:rounded-[40px] rounded-t-[40px]">
               <div className="flex items-center gap-4 mb-6 relative">
-                <div className="w-16 h-16 shrink-0 rounded-[16px] bg-white border border-black/5 shadow-md flex items-center justify-center p-1 -mt-8 relative z-10">
-                  {project.icon ? (
-                    <img src={project.icon} alt="icon" className="w-full h-full object-contain scale-110" />
-                  ) : (
-                    <div className="w-full h-full bg-black/5 rounded-[12px]" />
-                  )}
-                </div>
+              {/* 💥 重点修改：在这个 div 的 className 里加上 overflow-hidden ！！！ */}
+              <div className="w-16 h-16 shrink-0 rounded-[16px] bg-white border border-black/5 shadow-md flex items-center justify-center p-1 relative z-10 overflow-hidden">
+                {project.icon ? (
+                  <img src={project.icon} alt="icon" className="w-full h-full object-contain scale-110" />
+                ) : (
+                  <div className="w-full h-full bg-black/5 rounded-[12px]" />
+                )}
+              </div>
                 <div className="pt-2">
                   <h1 className="text-3xl font-black text-[#1A1A1A] leading-none tracking-tight">
                     {project.title}
@@ -139,7 +141,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ projectId, onClose }
             {/* 💥 恢复正常的 p-6 高度，无需妥协！ */}
             <div className="shrink-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-200 flex gap-4">
               <button className="flex-1 py-4 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg shadow-black/20">
-                <ExternalLink size={16} /> Visit Site
+                <ExternalLink size={16} /> DownLoad
               </button>
               <button className="w-14 h-14 shrink-0 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-transform active:scale-95">
                 <Github size={20} />
