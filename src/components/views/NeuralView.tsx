@@ -6,7 +6,7 @@ import { callAI } from '../../lib/ai';
 import { supabase } from '../../lib/supabase';
 
 const MY_AVATAR = "/cartoonf.png"; 
-const USER_AVATAR = "/ME.png"; // 💥 你的自定义头像已经准备就绪
+const USER_AVATAR = "/ME.png"; 
 
 export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [messages, setMessages] = useState([{ role: 'ai', text: "我是付昱淋的数字分身" }]);
@@ -54,11 +54,19 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   }, [messages, isThinking]);
 
   useEffect(() => {
-    let currentSession = localStorage.getItem('visitor_session_id');
-    if (!currentSession) {
+    let currentSession = '';
+    // 💥 修复：加上 try-catch 防御！防止苹果无痕模式/隐私模式拦截 localStorage 导致整个页面崩溃白屏！
+    try {
+      currentSession = localStorage.getItem('visitor_session_id') || '';
+      if (!currentSession) {
+        currentSession = 'visitor_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('visitor_session_id', currentSession);
+      }
+    } catch (error) {
+      console.warn('LocalStorage is blocked, generating temp session');
       currentSession = 'visitor_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('visitor_session_id', currentSession);
     }
+    
     setSessionId(currentSession);
 
     const fetchHistory = async () => {
@@ -131,7 +139,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
               key={i} className={`flex items-start gap-3 w-full ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
-              {/* 💥 修复了双重头像的 Bug！现在干干净净就渲染这一个头像框！ */}
               <div className="shrink-0 mt-1">
                 {m.role === 'ai' ? (
                   <div className="w-9 h-9 rounded-full border border-white/20 shadow-[0_0_12px_rgba(255,255,255,0.05)] overflow-hidden bg-slate-900">
