@@ -184,7 +184,7 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
               onKeyDown={e => e.key === 'Enter' && handleSend()} 
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
-              placeholder="与付昱淋对话..." 
+              placeholder="与付昱淋的数字分身对话..." 
               className="w-full bg-transparent border-none text-white/90 placeholder:text-white/40 text-[14px] font-medium outline-none focus:ring-0 py-3.5 pl-5 pr-11" 
             />
             <button 
