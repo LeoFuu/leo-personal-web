@@ -12,6 +12,9 @@ import { NeuralView } from '../components/views/NeuralView';
 import { NotesView } from '../components/views/NotesView';
 import { GuestbookView } from '../components/views/GuestbookView';
 
+// 💥 全局唯一的音频上下文，拯救手机 CPU！
+let globalAudioCtx: any = null;
+
 export default function Page() {
   const [activeTab, setActiveTab] = useState('home');
   const [pendingTab, setPendingTab] = useState<string | null>(null); 
@@ -69,26 +72,43 @@ export default function Page() {
     };
     fetchGlobalJumps();
 
+    // 2. 接收来自四面八方的跳跃信号
     const handleGlobalJump = () => {
       setGlobalJumps(prev => prev + 1);
       
-      // 原生 API 实时合成 Q 弹跳跃声
+      // 💥 极致性能优化：复用 AudioContext，解决手机端爆音和卡顿！
       try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine'; 
-        osc.frequency.setValueAtTime(300, ctx.currentTime); 
-        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1); 
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.2);
-      } catch (e) {}
+        if (typeof window !== 'undefined') {
+          if (!globalAudioCtx) {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            globalAudioCtx = new AudioContextClass();
+          }
+          // 苹果设备安全策略：如果是挂起状态，先恢复它
+          if (globalAudioCtx.state === 'suspended') {
+            globalAudioCtx.resume();
+          }
 
+          const osc = globalAudioCtx.createOscillator();
+          const gain = globalAudioCtx.createGain();
+          
+          osc.type = 'sine'; 
+          osc.frequency.setValueAtTime(300, globalAudioCtx.currentTime); 
+          osc.frequency.exponentialRampToValueAtTime(600, globalAudioCtx.currentTime + 0.1); 
+          
+          gain.gain.setValueAtTime(0.3, globalAudioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, globalAudioCtx.currentTime + 0.15);
+
+          osc.connect(gain);
+          gain.connect(globalAudioCtx.destination);
+          
+          osc.start();
+          osc.stop(globalAudioCtx.currentTime + 0.2);
+        }
+      } catch (e) {
+        console.warn("Audio play failed:", e);
+      }
+
+      // 异步告诉 Supabase 数据库加一
       supabase.rpc('increment_spirit_jumps').then();
     };
 
