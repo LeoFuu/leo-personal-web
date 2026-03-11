@@ -45,23 +45,33 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          className="fixed inset-0 z-[99999] flex items-center justify-center p-5"
+        className="fixed inset-0 z-[99999] flex items-center justify-center p-5"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        // 💥 优化 1：背景渐变加速
+        transition={{ duration: 0.15, ease: "easeOut" }} 
+      >
+        {/* 背景遮罩 */}
+        <motion.div 
+          className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
+          onClick={onClose}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-        >
-          <motion.div 
-            className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
-            onClick={onClose}
-          />
+        />
 
-          <motion.div 
-            className="relative w-full max-w-[340px] bg-white/80 backdrop-blur-3xl border border-white shadow-[0_40px_80px_rgba(0,0,0,0.15)] rounded-[40px] overflow-hidden p-6"
-            initial={{ scale: 0.9, y: 30, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.9, y: 20, opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 350 }}
-          >
+        {/* 💥 核心弹窗容器 */}
+        <motion.div 
+          className="relative w-full max-w-[340px] bg-white/80 backdrop-blur-3xl border border-white shadow-[0_40px_80px_rgba(0,0,0,0.15)] rounded-[40px] overflow-hidden p-6"
+          initial={{ scale: 0.85, y: 40, opacity: 0 }}
+          animate={{ scale: 1, y: 0, opacity: 1 }}
+          exit={{ scale: 0.9, y: 20, opacity: 0, transition: { duration: 0.15 } }}
+          // 💥 优化 2：调整物理弹簧，变得极度干脆轻盈！(降低 stiffness 和 damping)
+          transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
+          // 💥 优化 3：开启极致硬件加速，防止掉帧
+          style={{ willChange: 'transform, opacity', transform: 'translateZ(0)' }}
+        >
             {/* 右上角关闭按钮 */}
             <button 
               onClick={onClose}

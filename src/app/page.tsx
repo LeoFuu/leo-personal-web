@@ -60,6 +60,14 @@ export default function Page() {
     setIsPlayingMusic(!isPlayingMusic);
   };
 
+  // 在已有的 useEffect 里，或者新建一个
+  useEffect(() => {
+    if (bgMusicRef.current) {
+      // 💥 调整 BGM 音量：0.0 到 1.0 之间。0.3 就是 30% 音量，非常适合做背景音
+      bgMusicRef.current.volume = 0.3; 
+    }
+  }, []);
+
   // 💥 监听全局跳跃事件 & 同步 Supabase
   useEffect(() => {
     const fetchGlobalJumps = async () => {
@@ -95,7 +103,7 @@ export default function Page() {
           osc.frequency.setValueAtTime(300, globalAudioCtx.currentTime); 
           osc.frequency.exponentialRampToValueAtTime(600, globalAudioCtx.currentTime + 0.1); 
           
-          gain.gain.setValueAtTime(0.3, globalAudioCtx.currentTime);
+          gain.gain.setValueAtTime(0.6, globalAudioCtx.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.01, globalAudioCtx.currentTime + 0.15);
 
           osc.connect(gain);
