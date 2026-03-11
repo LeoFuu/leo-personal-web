@@ -6,7 +6,7 @@ import { callAI } from '../../lib/ai';
 import { supabase } from '../../lib/supabase';
 
 const MY_AVATAR = "/cartoonf.png"; 
-const USER_AVATAR = "/ME.png";
+const USER_AVATAR = "/ME.png"; // 💥 你的自定义头像已经准备就绪
 
 export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
   const [messages, setMessages] = useState([{ role: 'ai', text: "我是付昱淋的数字分身" }]);
@@ -99,15 +99,12 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      // 💥 魔法改动：加入了 scale 微缩放，把 y 从百分比换成了明确的 80px，给弹簧发力空间
       initial={{ opacity: 0, y: 80, scale: 0.95 }} 
       animate={{ opacity: 1, y: 0, scale: 1 }} 
       exit={{ opacity: 0, y: 40, scale: 0.95, transition: { duration: 0.2, ease: "easeIn" } }}
-      // 💥 魔法改动：阻尼 (damping) 从 28 降到 18，硬度 (stiffness) 提到 450，完美果冻感！
       transition={{ type: "spring", stiffness: 450, damping: 18, mass: 0.8 }}
       onPointerMove={handlePointerMove}
       className="fixed inset-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] flex flex-col overflow-hidden sm:rounded-none"
-      // 💥 魔法改动：加入 willChange 和 translateZ，强迫手机 GPU 提前渲染，保证 60 帧丝滑！
       style={{ borderTop: '1px solid rgba(255,255,255,0.05)', willChange: 'transform, opacity', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
     >
       {isPresent && (
@@ -134,24 +131,19 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
               key={i} className={`flex items-start gap-3 w-full ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
+              {/* 💥 修复了双重头像的 Bug！现在干干净净就渲染这一个头像框！ */}
               <div className="shrink-0 mt-1">
                 {m.role === 'ai' ? (
                   <div className="w-9 h-9 rounded-full border border-white/20 shadow-[0_0_12px_rgba(255,255,255,0.05)] overflow-hidden bg-slate-900">
                     <img src={MY_AVATAR} alt="Clone" className="w-full h-full object-cover" />
                   </div>
                 ) : (
-                  // 💥 这里把写着 ME 的灰圈，彻底换成了真实的头像！
                   <div className="w-9 h-9 rounded-full border border-white/20 overflow-hidden shadow-lg bg-slate-800">
                     <img src={USER_AVATAR} alt="User" className="w-full h-full object-cover" />
                   </div>
                 )}
-              </div><div className="shrink-0 mt-1">
-                {m.role === 'ai' ? (
-                  <div className="w-9 h-9 rounded-full border border-white/20 shadow-[0_0_12px_rgba(255,255,255,0.05)] overflow-hidden bg-slate-900"><img src={MY_AVATAR} alt="Clone" className="w-full h-full object-cover" /></div>
-                ) : (
-                  <div className="w-9 h-9 rounded-full border border-white/20 bg-white/10 flex items-center justify-center"><span className="text-white/80 text-[10px] font-black">ME</span></div>
-                )}
               </div>
+              
               <div className="max-w-[78%]">
                 <div className="px-4 py-3 rounded-[24px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
                   <p className="text-[14px] leading-relaxed font-medium text-white/90 whitespace-pre-wrap break-words">{m.text}</p>
