@@ -1,10 +1,10 @@
 // src/components/views/Home/HomeIndex.tsx
 import React, { useState, useEffect } from 'react';
-import { motion, useAnimationControls } from 'framer-motion';
-import { ArrowDown, User, MessageSquare, Loader2, Sparkles } from 'lucide-react';
-import { supabase } from '../../../lib/supabase'; // 引入数据库通讯兵
+// 💥 引入 useScroll 和 useTransform
+import { motion, useAnimationControls, useScroll, useTransform } from 'framer-motion';
+import { ArrowDown, User, MessageSquare, Loader2, Sparkles, Music, VolumeX } from 'lucide-react'; 
+import { supabase } from '../../../lib/supabase';
 
-// 你原本完美的组件结构，一个都没少！
 import { MetalClipBack, MetalClipFront } from './MetalClip';
 import { IDCard } from './IDCard';
 import { ProjectDeck } from './ProjectDeck';
@@ -15,13 +15,21 @@ export interface HomeProps {
   showSpiritHere: boolean;
   isPreparing: boolean;
   jumpType: 'hop' | 'dive' | 'soar';
-  onNavigate?: (tabId: string) => void; // 💥 加上导航函数，供最底部的按钮使用
+  onNavigate?: (tabId: string) => void;
+  globalJumps?: number;
+  isPlayingMusic?: boolean;
+  toggleMusic?: () => void;
 }
 
-export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, jumpType, onNavigate }) => {
-  // ==========================================
-  // 1. 保留你原汁原味的：名片与卡片堆叠动画逻辑
-  // ==========================================
+export const HomeIndex: React.FC<HomeProps> = ({ 
+  showSpiritHere, 
+  isPreparing, 
+  jumpType, 
+  onNavigate,
+  globalJumps = 0,
+  isPlayingMusic = false,
+  toggleMusic
+}) => {
   const [deck, setDeck] = useState([0, 1, 2]); 
   const [isAnimating, setIsAnimating] = useState(false);
   const [bumpCount, setBumpCount] = useState(0);
@@ -32,9 +40,18 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
   const clipControls = useAnimationControls();
   const idCardControls = useAnimationControls(); 
 
+  // 💥 新增：监听滚动距离，实现下拉渐隐魔法
+  const { scrollY } = useScroll();
+  // 当往下滚动 0~150px 时，透明度从 0.8 变成 0
+  const counterOpacity = useTransform(scrollY, [0, 150], [0.8, 0]);
+  // 当它透明时，禁止点击它（防止在不可见的情况下误触）
+  const counterPointerEvents = useTransform(scrollY, [0, 150], ["auto", "none"] as any);
+
   const handleNextCard = async () => {
     if (isAnimating || selectedProjectId !== null || showProfileModal) return;
     setIsAnimating(true);
+
+    window.dispatchEvent(new CustomEvent('trigger-spirit-jump'));
 
     clipControls.start({ rotate: -25, x: -5, y: -5, transition: { duration: 0.08, ease: 'easeOut' } });
     idCardControls.start({ rotate: -9, y: -1, transition: { duration: 0.08, ease: 'easeOut' } });
@@ -51,10 +68,6 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
     setTimeout(() => setIsAnimating(false), 100);
   };
 
-
-  // ==========================================
-  // 2. 完美接驳：无尽引擎与时间轴数据拉取
-  // ==========================================
   const [timelineData, setTimelineData] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -111,23 +124,44 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
     fetchPage();
   }, [page]);
 
-
-  // ==========================================
-  // 3. UI 渲染：顶层动画 + 底层时间轴
-  // ==========================================
   return (
     <div className="w-full flex flex-col items-center">
       
-      {/* 弹窗组件：原封不动 */}
+      {/* 💥 BGM 控制器 (左上角)：纯 fixed，下拉时依然坚挺显示！ */}
+      <motion.div 
+        className="fixed top-6 left-6 sm:top-10 sm:left-10 z-[100] flex flex-col items-start justify-center cursor-pointer group"
+        onClick={toggleMusic}
+      >
+        <span className="text-[9px] font-black text-slate-400/80 tracking-widest uppercase mb-1.5 drop-shadow-sm ml-1">BGM</span>
+        <div className="px-3.5 py-1.5 rounded-full bg-white/70 backdrop-blur-md border border-slate-200/80 shadow-sm flex items-center justify-center gap-2 group-active:scale-90 transition-transform">
+          <motion.div animate={isPlayingMusic ? { rotate: 360 } : { rotate: 0 }} transition={{ duration: 3, repeat: Infinity, ease: "linear" }}>
+            {isPlayingMusic ? <Music size={12} className="text-slate-800" /> : <VolumeX size={12} className="text-slate-400" />}
+          </motion.div>
+          <span className="text-[10px] font-black text-slate-700 tracking-tighter">{isPlayingMusic ? 'PLAYING' : 'OFF'}</span>
+        </div>
+      </motion.div>
+
+      {/* 💥 宇宙跳跃计数器 (右上角)：下拉时会平滑渐隐！ */}
+      <motion.div 
+        className="fixed top-6 right-6 sm:top-10 sm:right-10 z-[100] flex flex-col items-end justify-center"
+        // 将刚设置的随滚动变化的透明度和指针事件赋予它
+        style={{ opacity: counterOpacity, pointerEvents: counterPointerEvents as any }}
+      >
+        <span className="text-[9px] font-black text-slate-400/80 tracking-widest uppercase mb-1.5 drop-shadow-sm transition-opacity hover:opacity-100">Global Jumps</span>
+        <div className="px-3.5 py-1.5 rounded-full bg-white/70 backdrop-blur-md border border-slate-200/80 shadow-sm flex items-center justify-center min-w-[40px] transition-opacity hover:opacity-100">
+          <span className="text-xs font-black text-slate-800">{globalJumps.toLocaleString()}</span>
+        </div>
+      </motion.div>
+
+      {/* 弹窗组件 */}
       <ProjectModal projectId={selectedProjectId} onClose={() => setSelectedProjectId(null)} />
       <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
 
-      {/* 顶部：原汁原味的金属夹子和名片堆叠区域 */}
+      {/* 顶部：名片区域 */}
       <motion.div 
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: "spring", stiffness: 350, damping: 25 }}
-        // 💥 就是下面这行！把 pt-16 改回 pt-36
         className="relative w-full max-w-[360px] mx-auto pt-36 pb-12 px-2 z-20"
       >
         <div className="relative w-full h-[360px] cursor-pointer group" onClick={handleNextCard}>
@@ -145,12 +179,12 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
         </div>
       </motion.div>
 
-      {/* 过渡动画：向下滚动指示器 */}
+      {/* 过渡动画 */}
       <motion.div className="w-full flex justify-center mt-4 mb-8 opacity-40 z-10" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
         <ArrowDown size={14} className="text-slate-500" />
       </motion.div>
 
-      {/* 底部：动态时间轴与无尽加载 */}
+      {/* 底部：时间轴 */}
       <div className="relative w-full z-10">
         <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1px] bg-gradient-to-b from-white/0 via-white/40 to-white/0" />
 
@@ -172,8 +206,6 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
                   </div>
 
                   {item.type === 'thought' ? (
-                    // 💥 改动这里：加了 flex 居中、最小高度、文字居中和更舒服的行高
-                    // 💥 取消了统一的 p-6，改为 px-6 pt-2 pb-8，利用不对称的内边距把文字往上托！
                   <div className="px-6 pt-2 pb-8 flex-1 flex items-center justify-center min-h-[90px]">
                       <p className="text-[14px] leading-relaxed font-bold text-slate-800/90 whitespace-pre-wrap text-center">
                         {item.text}
@@ -202,7 +234,6 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
           );
         })}
 
-        {/* 探测器：只要滚到这里，就会加载下一页 */}
         {hasMore && (
           <motion.div 
             onViewportEnter={() => { if (!isLoading) setPage(p => p + 1); }}
@@ -212,14 +243,12 @@ export const HomeIndex: React.FC<HomeProps> = ({ showSpiritHere, isPreparing, ju
           </motion.div>
         )}
 
-        {/* 底线：宇宙的尽头 */}
         {!hasMore && timelineData.length > 0 && (
           <div className="w-full flex justify-center py-10 opacity-40">
             <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><Sparkles size={12} /> 到达人类最深处 <Sparkles size={12} /></span>
           </div>
         )}
 
-        {/* 去留言板的引导 */}
         <div className="w-full flex justify-center pt-8 pb-20">
           <motion.div 
             className="group bg-white/40 backdrop-blur-xl border border-white/60 rounded-[32px] p-6 flex items-center gap-5 cursor-pointer shadow-lg active:scale-95 transition-all"

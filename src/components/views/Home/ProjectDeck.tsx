@@ -86,22 +86,32 @@ export const ProjectDeck = ({ deck, onOpenDetail }: { deck: number[], onOpenDeta
                        </p>
                     </div>
                  </div>
-                 <p className="text-[12px] font-medium text-black/70 leading-snug line-clamp-2 h-[34px]">
+                 {/* 💥 在这里加上了 text-center */}
+                  <p className="text-[12px] font-medium text-black/70 leading-snug line-clamp-2 h-[34px] text-center">
                     {project?.description || "A revolutionary tool that bridges the gap between AI and e-commerce marketing."}
                  </p>
                  <div className="flex items-center gap-2 pt-1">
-                    <button 
-                       onClick={(e) => { e.stopPropagation(); onOpenDetail(id); }}
-                       className={`flex-1 py-2.5 rounded-full bg-white hover:bg-gray-50 border border-white/60 shadow-md ${project.textClass || 'text-slate-800'} text-[10px] font-black uppercase tracking-widest transition-all active:scale-95`}
-                    >
-                       View Detail
-                    </button>
-                    <button 
-                       onClick={(e) => { e.stopPropagation(); onOpenDetail(id); }}
-                       className="w-9 h-9 shrink-0 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center transition-colors"
-                    >
-                       <ArrowUpRight size={16} className="text-black/70" />
-                    </button>
+                 <button 
+                  onClick={(e) => { 
+                     e.stopPropagation(); 
+                     window.dispatchEvent(new CustomEvent('trigger-spirit-jump')); // 💥 触发全宇宙跳跃！
+                     onOpenDetail(id); 
+                  }}
+                  className={`flex-1 py-2.5 rounded-full bg-white hover:bg-gray-50 border border-white/60 shadow-md ${project.textClass || 'text-slate-800'} text-[10px] font-black uppercase tracking-widest transition-all active:scale-95`}
+                  >
+                  View Detail
+                  </button>
+
+                  <button 
+                  onClick={(e) => { 
+                     e.stopPropagation(); 
+                     window.dispatchEvent(new CustomEvent('trigger-spirit-jump')); // 💥 触发全宇宙跳跃！
+                     onOpenDetail(id); 
+                  }}
+                  className="w-9 h-9 shrink-0 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center transition-colors"
+                  >
+                  <ArrowUpRight size={16} className="text-black/70" />
+                  </button>
                  </div>
                </div>
             </div>

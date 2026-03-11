@@ -2,9 +2,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Home, Book, MessageSquare, Sparkles } from 'lucide-react';
+import { Home, Book, MessageSquare, Sparkles, Music, VolumeX } from 'lucide-react'; // 💥 引入音乐图标
 import { AnimatePresence, motion, useScroll, useTransform, useSpring, useMotionValueEvent } from 'framer-motion';
 
+import { supabase } from '../lib/supabase';
 import { VoidSpirit } from '../components/features/VoidSpirit';
 import { HomeIndex as HomeView } from '../components/views/Home/HomeIndex';
 import { NeuralView } from '../components/views/NeuralView';
@@ -20,6 +21,13 @@ export default function Page() {
   
   const [bootState, setBootState] = useState<'booting' | 'clearing' | 'ready'>('booting');
   const [isNavVisible, setIsNavVisible] = useState(true);
+  
+  // 💥 全宇宙跳跃次数统计
+  const [globalJumps, setGlobalJumps] = useState<number>(0);
+
+  // 💥 新增：背景音乐播放状态
+  const [isPlayingMusic, setIsPlayingMusic] = useState(false);
+  const bgMusicRef = useRef<HTMLAudioElement>(null);
   
   const timers = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({ jump: null, prepare: null, spirit: null, pageExit: null });
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -38,6 +46,56 @@ export default function Page() {
     }
   });
 
+  // 💥 背景音乐播放/暂停逻辑
+  const toggleMusic = () => {
+    if (!bgMusicRef.current) return;
+    if (isPlayingMusic) {
+      bgMusicRef.current.pause();
+    } else {
+      bgMusicRef.current.play().catch(err => console.log("播放被拦截", err));
+    }
+    setIsPlayingMusic(!isPlayingMusic);
+  };
+
+  // 💥 监听全局跳跃事件 & 同步 Supabase
+  useEffect(() => {
+    const fetchGlobalJumps = async () => {
+      try {
+        const { data } = await supabase.from('spirit_stats').select('total_jumps').eq('id', 1).single();
+        if (data) setGlobalJumps(data.total_jumps);
+      } catch (err) {
+        console.error("无法读取跳跃次数", err);
+      }
+    };
+    fetchGlobalJumps();
+
+    const handleGlobalJump = () => {
+      setGlobalJumps(prev => prev + 1);
+      
+      // 原生 API 实时合成 Q 弹跳跃声
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine'; 
+        osc.frequency.setValueAtTime(300, ctx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1); 
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.2);
+      } catch (e) {}
+
+      supabase.rpc('increment_spirit_jumps').then();
+    };
+
+    window.addEventListener('trigger-spirit-jump', handleGlobalJump);
+    return () => window.removeEventListener('trigger-spirit-jump', handleGlobalJump);
+  }, []);
+
   const triggerClearing = useCallback(() => {
     setBootState(prev => (prev === 'booting' ? 'clearing' : prev));
   }, []);
@@ -45,23 +103,11 @@ export default function Page() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || bootState !== 'booting') return;
-
-    const forcePlay = () => {
-      video.play().catch(() => { triggerClearing(); });
-    };
-
-    if ((window as any).WeixinJSBridge) {
-      forcePlay();
-    } else {
-      document.addEventListener("WeixinJSBridgeReady", forcePlay, false);
-    }
-
-    const handleTouch = () => {
-      forcePlay();
-      document.removeEventListener('touchstart', handleTouch);
-    };
+    const forcePlay = () => { video.play().catch(() => { triggerClearing(); }); };
+    if ((window as any).WeixinJSBridge) { forcePlay(); } 
+    else { document.addEventListener("WeixinJSBridgeReady", forcePlay, false); }
+    const handleTouch = () => { forcePlay(); document.removeEventListener('touchstart', handleTouch); };
     document.addEventListener('touchstart', handleTouch, { once: true });
-
     return () => {
       document.removeEventListener("WeixinJSBridgeReady", forcePlay, false);
       document.removeEventListener('touchstart', handleTouch);
@@ -83,7 +129,7 @@ export default function Page() {
 
   const handleNavClick = (tabId: string) => {
     if (tabId === activeTab || pendingTab === tabId) return;
-    
+    window.dispatchEvent(new CustomEvent('trigger-spirit-jump'));
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
     window.scrollTo({ top: 0, behavior: 'auto' });
 
@@ -139,14 +185,15 @@ export default function Page() {
     <div className="relative min-h-screen w-full bg-transparent font-sans text-slate-900 overflow-x-hidden flex flex-col">
       <style dangerouslySetInnerHTML={{__html: `html, body { overscroll-behavior: none; background-color: #FDFEFE; }`}} />
 
+      {/* 💥 背景音乐组件：隐藏在页面中 */}
+      <audio ref={bgMusicRef} src="/BackMusic.mp3" loop />
+
       <AnimatePresence>
         {bootState !== 'ready' && (
           <motion.div className="fixed inset-0 z-[99999] bg-black flex items-center justify-center pointer-events-none" initial={{ opacity: 1 }} animate={{ opacity: bootState === 'clearing' ? 0 : 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.2 }}>
             <motion.div className="flex flex-col items-center justify-center" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                <div className="relative group">
                    <div className="absolute inset-[-10%] sm:inset-[-20%] z-10 pointer-events-none" style={{ background: "radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 80%)" }} />
-                   
-                   {/* 💥 修复：将所有非标准属性改为 React 认可的驼峰式，防止 iOS 渲染树崩溃 */}
                    <video 
                      ref={videoRef} 
                      src="/start.mp4" 
@@ -172,11 +219,41 @@ export default function Page() {
       </AnimatePresence>
 
       <div className="fixed inset-0 z-0 pointer-events-none bg-[#E2E8F0]"> 
-        {/* 💥 核心修复：添加了 hidden sm:block！在手机端彻底禁用 SVG 噪点，拯救苹果 GPU！电脑端不受影响。 */}
         <div className="absolute inset-0 opacity-[0.04] hidden sm:block" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
         <div className="absolute top-0 inset-x-0 h-[80vh] bg-gradient-to-b from-white via-white/40 to-transparent" />
         <div className="absolute bottom-0 inset-x-0 h-[20vh] bg-gradient-to-t from-[#CBD5E1]/80 to-transparent" />
       </div>
+
+      💥 新增：背景音乐控制器 (左上角)
+      {/* <motion.div 
+        className="fixed top-6 left-6 sm:top-10 sm:left-10 z-[100] flex flex-col items-start justify-center cursor-pointer group"
+        onClick={toggleMusic}
+        style={{ display: activeTab === 'neural' ? 'none' : 'flex' }}
+      >
+        <span className="text-[9px] font-black text-slate-400/80 tracking-widest uppercase mb-1.5 drop-shadow-sm ml-1">BGM</span>
+        <div className="px-3.5 py-1.5 rounded-full bg-white/70 backdrop-blur-md border border-slate-200/80 shadow-sm flex items-center justify-center gap-2 group-active:scale-90 transition-transform">
+          <motion.div
+            animate={isPlayingMusic ? { rotate: 360 } : { rotate: 0 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          >
+            {isPlayingMusic ? <Music size={12} className="text-slate-800" /> : <VolumeX size={12} className="text-slate-400" />}
+          </motion.div>
+          <span className="text-[10px] font-black text-slate-700 tracking-tighter">
+            {isPlayingMusic ? 'PLAYING' : 'OFF'}
+          </span>
+        </div>
+      </motion.div> */}
+
+      {/* 💥 极客风全宇宙跳跃计数器 (右上角)
+      <motion.div 
+        className="fixed top-6 right-6 sm:top-10 sm:right-10 z-[100] flex flex-col items-end justify-center opacity-80 hover:opacity-100 transition-opacity"
+        style={{ display: activeTab === 'neural' ? 'none' : 'flex' }}
+      >
+        <span className="text-[9px] font-black text-slate-400/80 tracking-widest uppercase mb-1.5 drop-shadow-sm">Global Jumps</span>
+        <div className="px-3.5 py-1.5 rounded-full bg-white/70 backdrop-blur-md border border-slate-200/80 shadow-sm flex items-center justify-center min-w-[40px]">
+          <span className="text-xs font-black text-slate-800">{globalJumps.toLocaleString()}</span>
+        </div>
+      </motion.div> */}
 
       <motion.div className="fixed right-6 bottom-32 z-50 w-12 h-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center cursor-pointer shadow-lg" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ rotate: springRotate, display: activeTab === 'neural' ? 'none' : 'flex' }}>
         <div className="w-4 h-4 rounded-full border-[2px] border-slate-800/30 flex items-center justify-center"><div className="w-1 h-1 bg-slate-800/60 rounded-full" /></div>
@@ -184,7 +261,19 @@ export default function Page() {
 
       <motion.main className="relative z-10 max-w-xl mx-auto w-full px-5 pb-32 pt-10 flex-1" initial={{ opacity: 0, y: 40 }} animate={bootState !== 'booting' ? { opacity: 1, y: 0 } : {}}>
         <AnimatePresence mode="wait">
-          {activeTab === 'home' && ( <HomeView key="home" showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} onNavigate={handleNavClick} /> )}
+        {activeTab === 'home' && ( 
+            <HomeView 
+              key="home" 
+              showSpiritHere={pendingTab === null} 
+              isPreparing={isPreparing} 
+              jumpType={jumpType} 
+              onNavigate={handleNavClick} 
+              // 💥 重点：把状态传给子组件
+              globalJumps={globalJumps}
+              isPlayingMusic={isPlayingMusic}
+              toggleMusic={toggleMusic}
+            /> 
+          )}
           {activeTab === 'neural' && <NeuralView key="neural" showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />}
           {activeTab === 'notes' && <NotesView key="notes" />}
           {activeTab === 'guestbook' && <GuestbookView key="guestbook" />}
