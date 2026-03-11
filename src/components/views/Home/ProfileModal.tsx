@@ -126,12 +126,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                <SocialRow 
                  icon={<Github size={18} />} 
                  title="GitHub" desc="@LeoFuu" iconBg="bg-slate-900/5" iconColor="text-slate-800" 
-                 href="https://github.com/LeoFuu" // 💥 换成你的 GitHub 链接
+                 href="https://github.com" // 💥 换成你的 GitHub 链接
                />
                <SocialRow 
                  icon={<XIcon size={16} />} 
                  title="Twitter (X)" desc="碎片化产品思考/大号被封了最近在申诉" iconBg="bg-slate-900/5" iconColor="text-slate-900" 
-                 href="www.4399.com" // 💥 换成你的 X 链接
+                 href="https://x.com/home" // 💥 换成你的 X 链接
                />
 
                {/* 💥 微信二维码专属弹层 */}
