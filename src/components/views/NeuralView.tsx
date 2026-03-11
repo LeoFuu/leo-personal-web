@@ -98,14 +98,16 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: "10%" }} 
-      animate={{ opacity: 1, y: 0 }} 
-      exit={{ opacity: 0, y: "10%", transition: { duration: 0.25, ease: "easeIn" } }}
-      transition={{ type: "spring", stiffness: 350, damping: 28, mass: 0.8 }}
+      // 💥 魔法改动：加入了 scale 微缩放，把 y 从百分比换成了明确的 80px，给弹簧发力空间
+      initial={{ opacity: 0, y: 80, scale: 0.95 }} 
+      animate={{ opacity: 1, y: 0, scale: 1 }} 
+      exit={{ opacity: 0, y: 40, scale: 0.95, transition: { duration: 0.2, ease: "easeIn" } }}
+      // 💥 魔法改动：阻尼 (damping) 从 28 降到 18，硬度 (stiffness) 提到 450，完美果冻感！
+      transition={{ type: "spring", stiffness: 450, damping: 18, mass: 0.8 }}
       onPointerMove={handlePointerMove}
-      // 💥 修复 1：将 bottom 动态位移彻底删除，改为 fixed inset-0。让黑框永远填满整个屏幕！
       className="fixed inset-0 mx-auto w-full max-w-md bg-[#0A0A0A] z-[45] flex flex-col overflow-hidden sm:rounded-none"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+      // 💥 魔法改动：加入 willChange 和 translateZ，强迫手机 GPU 提前渲染，保证 60 帧丝滑！
+      style={{ borderTop: '1px solid rgba(255,255,255,0.05)', willChange: 'transform, opacity', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
     >
       {isPresent && (
         <style dangerouslySetInnerHTML={{__html: `
@@ -158,8 +160,6 @@ export const NeuralView: React.FC<any> = ({ showSpiritHere }) => {
       </div>
 
       <div 
-        // 💥 修复 2：容器本身不动，只改变内部的 padding-bottom！
-        // 没开键盘时，内部填高 100px 把输入框顶上来；开了键盘时，内边距变小，输入框下沉！完美掩盖所有白边！
         className="shrink-0 bg-[#0A0A0A] border-t border-white/5 px-4 sm:px-8 pt-4 relative z-20 transition-all duration-300 ease-out"
         style={{ paddingBottom: isKeyboardOpen ? 'calc(1rem + env(safe-area-inset-bottom))' : '100px' }}
       >
