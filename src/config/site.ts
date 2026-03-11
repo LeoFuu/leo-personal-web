@@ -22,7 +22,7 @@ export const projects: any = [
     likes: 128,
     link: "#",
     downloadUrl: "", // 💥 注意这里！必须有逗号！
-    bgClass: "bg-sky-100", 
+    bgClass: "bg-white", 
   textClass: "text-sky-900",
   },
   {
@@ -71,8 +71,8 @@ export const projects: any = [
     likes: 85,
     link: "#",
     downloadUrl: "", // 💥 注意这里！必须有逗号！
-    bgClass: "bg-stone-100", // 羊皮纸色
-  textClass: "text-stone-800",
+    bgClass: "bg-slate-50", // 羊皮纸色
+    textClass: "text-stone-800",
   },
   {
     title: "深夜便利店守则",
@@ -85,7 +85,7 @@ export const projects: any = [
     likes: 42,
     link: "#",
     downloadUrl: "", // 💥 注意这里！必须有逗号！
-    bgClass: "bg-neutral-300", // 极淡的血牙色（带有极度克制的恐怖暗示）
-  textClass: "text-rose-900"
+    bgClass: "bg-slate-200", // 极淡的血牙色（带有极度克制的恐怖暗示）
+    textClass: "text-rose-900"
   }
 ];

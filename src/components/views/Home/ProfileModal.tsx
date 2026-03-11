@@ -111,7 +111,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                <SocialRow 
                  icon={<DouyinIcon size={16} />} 
                  title="Douyin" desc="日常灵感与数字生活/在想要不要再开个号" iconBg="bg-slate-900/5" iconColor="text-slate-800" 
-                 href="https://v.douyin.com/YOUR_LINK/" // 💥 换成你的抖音主页链接
+                 href="www.4399.com" // 💥 换成你的抖音主页链接
                />
                <SocialRow 
                  icon={<Github size={18} />} 
@@ -121,7 +121,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                <SocialRow 
                  icon={<XIcon size={16} />} 
                  title="Twitter (X)" desc="碎片化产品思考/大号被封了最近在申诉" iconBg="bg-slate-900/5" iconColor="text-slate-900" 
-                 href="https://twitter.com/YOUR_HANDLE" // 💥 换成你的 X 链接
+                 href="www.4399.com" // 💥 换成你的 X 链接
                />
 
                {/* 💥 微信二维码专属弹层 */}

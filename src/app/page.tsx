@@ -11,7 +11,6 @@ import { NeuralView } from '../components/views/NeuralView';
 import { NotesView } from '../components/views/NotesView';
 import { GuestbookView } from '../components/views/GuestbookView';
 
-
 export default function Page() {
   const [activeTab, setActiveTab] = useState('home');
   const [pendingTab, setPendingTab] = useState<string | null>(null); 
@@ -29,18 +28,12 @@ export default function Page() {
   const rawRotate = useTransform(scrollY, [0, 2000], [0, 1080]); 
   const springRotate = useSpring(rawRotate, { stiffness: 150, damping: 25 });
 
-  // 💥 新增：滑动隐藏导航栏与回到顶部按钮的神器
   useMotionValueEvent(scrollY, "change", (latest) => {
-    // 只有在首页和笔记页才启用滑动隐藏（AI页和留言板保持不动）
     if (activeTab !== 'home' && activeTab !== 'notes') return;
-    
     const previous = scrollY.getPrevious() || 0;
-    // 如果向下滑动超过 100px，就隐藏导航栏
     if (latest > previous && latest > 100) {
       setIsNavVisible(false);
-    } 
-    // 如果向上滑动（哪怕只滑了一点点），或者回到了最顶部，立刻显示导航栏
-    else if (latest < previous || latest <= 100) {
+    } else if (latest < previous || latest <= 100) {
       setIsNavVisible(true);
     }
   });
@@ -49,8 +42,42 @@ export default function Page() {
     setBootState(prev => (prev === 'booting' ? 'clearing' : prev));
   }, []);
 
+  // 💥 微信黑屏终极克星：强制唤醒播放 Hook
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || bootState !== 'booting') return;
+
+    const forcePlay = () => {
+      video.play().catch(() => {
+        // 如果连物理点击都被浏览器无情拒绝，直接跳过黑屏动画进网站！不能让用户干等！
+        triggerClearing();
+      });
+    };
+
+    // 魔法 1：监听微信专属的底层 JSBridge 准备就绪事件
+    if ((window as any).WeixinJSBridge) {
+      forcePlay();
+    } else {
+      document.addEventListener("WeixinJSBridgeReady", forcePlay, false);
+    }
+
+    // 魔法 2：触屏保底。只要用户手指碰了一下屏幕（任何地方），立刻强制唤醒视频！
+    const handleTouch = () => {
+      forcePlay();
+      document.removeEventListener('touchstart', handleTouch);
+    };
+    document.addEventListener('touchstart', handleTouch, { once: true });
+
+    return () => {
+      document.removeEventListener("WeixinJSBridgeReady", forcePlay, false);
+      document.removeEventListener('touchstart', handleTouch);
+    };
+  }, [bootState, triggerClearing]);
+
+  // 保底安全定时器
   useEffect(() => { 
-    const safetyTimer = setTimeout(() => { triggerClearing(); }, 5000); 
+    // 把 5 秒缩短到 4 秒，防止用户失去耐心
+    const safetyTimer = setTimeout(() => { triggerClearing(); }, 4000); 
     const handleToggle = (e: any) => setIsNavVisible(e.detail);
     window.addEventListener('toggle-navbar', handleToggle);
     return () => { clearTimeout(safetyTimer); window.removeEventListener('toggle-navbar', handleToggle); };
@@ -65,65 +92,49 @@ export default function Page() {
   const handleNavClick = (tabId: string) => {
     if (tabId === activeTab || pendingTab === tabId) return;
     
-    // 清除所有正在进行的动画计时器
     Object.values(timers.current).forEach(t => t && clearTimeout(t));
     window.scrollTo({ top: 0, behavior: 'auto' });
 
-   // 💥 状态机 1：跳转到 AI 页（Neural）
-    // 逻辑：先让小精灵朝着 AI 图标起跳，但在半空中（100毫秒时）瞬间切页，并把它抹除！
     if (tabId === 'neural') {
       setIsPreparing(true);
-      setJumpType('dive'); // 采用向下俯冲的姿势
-
+      setJumpType('dive');
       timers.current.spirit = setTimeout(() => {
           setIsPreparing(false); 
-          setSpiritTarget(tabId); // 发射！小精灵开始飞向底部导航栏
+          setSpiritTarget(tabId); 
           setPendingTab(tabId);       
-          
-          // 💥 核心魔法：100ms 后页面切换。
           timers.current.pageExit = setTimeout(() => { 
             setActiveTab(tabId); 
-            // 💥 终极修复：就是加了这一句！页面切过去的同时，把导航栏上的小精灵目标清空，让它瞬间“湮灭”！
             setSpiritTarget(null); 
           }, 100); 
       }, 150); 
       return; 
     }
 
-    // --- 下面是其他页面的通用起跳动作 ---
     const isStartingFromPage = spiritTarget === null;
     setIsPreparing(true);
     setJumpType(isStartingFromPage ? 'dive' : 'hop');
 
-    // 动作 1：小精灵先跳到导航栏的目标图标上
     timers.current.spirit = setTimeout(() => {
         setIsPreparing(false); 
-        setSpiritTarget(tabId); // 让小精灵稳稳落在导航栏
+        setSpiritTarget(tabId); 
         setPendingTab(tabId);       
-        
-        // 瞬间切换页面内容
         timers.current.pageExit = setTimeout(() => { setActiveTab(tabId); }, 50);
     }, 150); 
 
-    //  状态机 2：跳转到“笔记”或“留言板”
-    // 逻辑：直接 return！不去触发后续的乱跳代码，让它安安静静趴在导航栏陪你看书！
     if (tabId === 'notes' || tabId === 'guestbook') {
       return;
     }
 
-    //  状态机 3：跳转到“首页”
-    // 逻辑：在导航栏短暂停留一下，然后立刻蓄力跳向中间的卡片！
     if (tabId === 'home') {
       timers.current.prepare = setTimeout(() => {
           setIsPreparing(true); 
-          setJumpType('soar'); // 设置起飞姿势
-          
+          setJumpType('soar'); 
           timers.current.jump = setTimeout(() => {
               setIsPreparing(false); 
-              setSpiritTarget(null); // 设为 null，把渲染权交接给 HomeView，实现飞入名片！
+              setSpiritTarget(null); 
               setPendingTab(null);   
           }, 150);
-      }, 1000); //  关键修复：把原本漫长拖沓的 3150ms 缩短到 500ms！极限清爽！
+      }, 1000); 
     }
   };
 
@@ -145,7 +156,24 @@ export default function Page() {
             <motion.div className="flex flex-col items-center justify-center" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                <div className="relative group">
                    <div className="absolute inset-[-10%] sm:inset-[-20%] z-10 pointer-events-none" style={{ background: "radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 80%)" }} />
-                   <video ref={videoRef} src="/start.mp4" autoPlay muted playsInline preload="auto" className="w-[260px] sm:w-[320px] h-auto object-contain" onCanPlay={() => { videoRef.current?.play().catch(() => triggerClearing()); }} onEnded={triggerClearing} onError={triggerClearing} />
+                   
+                   {/* 💥 微信视频保命全家桶属性：webkit-playsinline, x5-playsinline, x5-video-player-type */}
+                   <video 
+                     ref={videoRef} 
+                     src="/start.mp4" 
+                     autoPlay 
+                     muted 
+                     playsInline 
+                     webkit-playsinline="true" 
+                     x5-playsinline="true" 
+                     x5-video-player-type="h5" 
+                     x5-video-player-fullscreen="false" 
+                     preload="auto" 
+                     className="w-[260px] sm:w-[320px] h-auto object-contain pointer-events-auto" 
+                     onCanPlay={() => { videoRef.current?.play().catch(() => {}); }} 
+                     onEnded={triggerClearing} 
+                     onError={triggerClearing} 
+                   />
                </div>
             </motion.div>
           </motion.div>
@@ -173,7 +201,7 @@ export default function Page() {
               showSpiritHere={pendingTab === null} 
               isPreparing={isPreparing} 
               jumpType={jumpType} 
-              onNavigate={handleNavClick} // 传递导航函数给子组件
+              onNavigate={handleNavClick}
             />
           )}
           {activeTab === 'neural' && <NeuralView key="neural" showSpiritHere={pendingTab === null} isPreparing={isPreparing} jumpType={jumpType} />}
