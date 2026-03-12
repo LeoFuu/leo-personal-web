@@ -14,7 +14,7 @@ export const projects: any = [
     tech: "Next.js • OpenAI • Scraper",
     category: "AI TOOLS",
     description: "自动爬取亚马逊商品数据插件，AI 智能生成多平台带货文案，让跨境电商营销如虎添翼",
-    detail: "自动爬取亚马逊商品数据，AI 智能生成多平台带货文案，让跨境电商营销如虎添翼\n\n谷歌插件商店审核中",
+    detail: "自动爬取亚马逊商品数据，AI 智能生成多平台带货文案，让跨境电商营销如虎添翼\n\n第一次写爬虫，谷歌插件商店审核中",
     // 👇 把你那张“桌面屏幕图”放到 public 文件夹下，然后把名字填在这里 (比如 /images/cover.png)
     cover: "/CrossEcom AI image/amazon-ai-cover.png", 
     // 👇 把你那张“3D发光购物袋”放到 public 文件夹下，名字填在这里

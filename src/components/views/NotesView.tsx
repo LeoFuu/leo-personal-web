@@ -71,7 +71,7 @@ export const NotesView = () => {
               title: note.title,
               content: note.content,
               date: dateStr,
-              views: note.views || 0, // 💥 拿到浏览量，如果没有就是 0
+              views: note.view_count || 0, // 💥 拿到浏览量，如果没有就是 0
               rotation: physicalProps.rotation,
               offsetX: physicalProps.offsetX
             };
@@ -155,7 +155,7 @@ export const NotesView = () => {
                   
                   {/* 💥 卡片底部：加入左侧眼睛图标 + 浏览量，右侧日期 */}
                   <div className="relative z-10 flex justify-between items-center mt-auto pt-2 border-t border-slate-50/50">
-                    <div className="flex items-center gap-1.5 text-slate-400">
+                  <div className="hidden items-center gap-1.5 text-slate-400">
                       <Eye size={12} strokeWidth={2.5} />
                       <span className="text-[10px] font-black tracking-widest">{note.views}</span>
                     </div>
@@ -212,7 +212,7 @@ export const NotesView = () => {
                          
                          {/* 💥 展开详情页底部的浏览量和日期 */}
                          <div className="mt-8 pt-6 border-t border-slate-100/50 flex justify-between items-center">
-                           <div className="flex items-center gap-1.5 text-slate-400">
+                           <div className="hidden items-center gap-1.5 text-slate-400">
                              <Eye size={12} strokeWidth={2.5} />
                              <span className="text-[11px] font-black tracking-widest">{activeNote.views}</span>
                            </div>
