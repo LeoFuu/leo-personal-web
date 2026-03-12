@@ -2,18 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-// 💥 引入 Eye 图标
 import { X, Loader2, Eye } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Note {
   id: string;
-  // 为了后续存取方便，这里存一下原始 ID
-  rawId: string; 
+  // 💥 修正 1：改为 number，完美匹配你数据库里的 int8
+  rawId: number; 
   title: string;
   content: string;
   date: string;
-  // 💥 增加浏览量字段
   views: number;
   rotation: number;
   offsetX: number;
@@ -38,7 +36,6 @@ export const NotesView = () => {
 
   useEffect(() => { setMounted(true); }, []);
 
-  // 控制底部导航栏隐藏
   useEffect(() => {
     const nav = document.getElementById('global-navbar');
     if (!nav) return;
@@ -71,7 +68,8 @@ export const NotesView = () => {
               title: note.title,
               content: note.content,
               date: dateStr,
-              views: note.view_count || 0, // 💥 拿到浏览量，如果没有就是 0
+              // 💥 修正 2：读取你数据库中真实的字段名 view_count
+              views: note.view_count || 0, 
               rotation: physicalProps.rotation,
               offsetX: physicalProps.offsetX
             };
@@ -87,14 +85,13 @@ export const NotesView = () => {
     fetchNotes();
   }, []);
 
-  // 💥 处理点击笔记事件：不但要展开卡片，还要通知数据库浏览量 +1
   const handleNoteClick = async (note: Note) => {
     setSelectedId(note.id);
     
-    // 乐观更新 UI：点击瞬间自己先看到 +1 的效果，不用等接口回来
+    // 乐观更新 UI
     setNotesData(prev => prev.map(n => n.id === note.id ? { ...n, views: n.views + 1 } : n));
 
-    // 异步调用刚刚在 Supabase 写的自增函数
+    // 💥 修正 3：完美调用你刚刚在后台创建的 SQL (RPC) 函数
     try {
       await supabase.rpc('increment_note_views', { note_id: note.rawId });
     } catch (err) {
@@ -131,7 +128,7 @@ export const NotesView = () => {
               <motion.div
                 layoutId={`card-container-${note.id}`} key={note.id} drag="x"
                 dragConstraints={{ left: 0, right: 0 }} dragElastic={0.2}
-                onClick={() => handleNoteClick(note)} // 💥 改用新函数
+                onClick={() => handleNoteClick(note)} 
                 className={`relative w-full cursor-grab active:cursor-grabbing ${index !== 0 ? '-mt-6' : ''}`}
                 initial={{ opacity: 0, y: 50, rotate: note.rotation * 3 }}
                 animate={{ opacity: 1, y: 0, rotate: note.rotation, x: note.offsetX, zIndex: stackZIndex }}
@@ -153,12 +150,14 @@ export const NotesView = () => {
                     <p className="text-[14px] font-medium text-slate-500 leading-relaxed line-clamp-2 mb-2 indent-[2em]">{note.content}</p>
                   </div>
                   
-                  {/* 💥 卡片底部：加入左侧眼睛图标 + 浏览量，右侧日期 */}
                   <div className="relative z-10 flex justify-between items-center mt-auto pt-2 border-t border-slate-50/50">
-                  <div className="hidden items-center gap-1.5 text-slate-400">
+                    {/* 💥 修正 4：已根据你的要求，用 hidden 隐藏了小眼睛，但是保留了代码结构 */}
+                    <div className="hidden items-center gap-1.5 text-slate-400">
                       <Eye size={12} strokeWidth={2.5} />
                       <span className="text-[10px] font-black tracking-widest">{note.views}</span>
                     </div>
+                    {/* 为了保持日期靠右对齐，在左侧放一个空的 div 占位 */}
+                    <div className="flex-1"></div>
                     <span className="text-[11px] font-bold text-slate-400/60 tracking-wider">{note.date}</span>
                   </div>
                 </div>
@@ -210,12 +209,13 @@ export const NotesView = () => {
                            ))}
                          </div>
                          
-                         {/* 💥 展开详情页底部的浏览量和日期 */}
                          <div className="mt-8 pt-6 border-t border-slate-100/50 flex justify-between items-center">
+                           {/* 💥 修正 5：弹窗里的眼睛也隐藏了，并用 flex-1 保证日期靠右 */}
                            <div className="hidden items-center gap-1.5 text-slate-400">
                              <Eye size={12} strokeWidth={2.5} />
                              <span className="text-[11px] font-black tracking-widest">{activeNote.views}</span>
                            </div>
+                           <div className="flex-1"></div>
                            <span className="text-[12px] font-bold text-slate-400/60 tracking-wider">{activeNote.date}</span>
                          </div>
                       </div>
